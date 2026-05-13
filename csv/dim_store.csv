@@ -1,0 +1,151 @@
+storeid,storename,city,type,staff,sizem2,hascafe,openingyear,region,renovationyear,parkingspots,storerating,hasdeliveryservice,floornumber,distancetocitycenterkm,annualrentcost,storesizemultiplier
+1,ValueStore New York Mall,New York,Supermarket,35,1728,1,1996,North,2011,72,2.8,0,4,14.8,27697.0,1.9098844401904713
+2,HeritageMall Phoenix Park,Phoenix,Department,65,3048,1,2007,West,2011,111,2.8,1,5,11.5,36997.0,1.0784902310978632
+3,FreshMart Los Angeles Plaza,Los Angeles,Supermarket,45,1940,0,2017,East,2017,56,3.3,1,1,24.2,27894.0,2.187850782899565
+4,HeritageMall Phoenix Plaza,Phoenix,Department,52,2452,0,2012,North,2015,94,3.4,1,1,12.7,29763.0,4.0
+5,TheGalleria New York Park,New York,Department,33,1777,1,1987,West,0,60,2.5,0,5,7.7,28482.0,0.9893194096647593
+6,GreenWay Philadelphia Center,Philadelphia,Supermarket,47,2379,0,1997,West,2021,77,3.4,1,2,10.9,31199.0,0.9893340279531307
+7,TheGalleria San Antonio Point,San Antonio,Department,38,1634,1,2019,East,2019,73,3.5,0,4,8.1,20330.0,4.0
+8,DailyGrocer Dallas Mall,Dallas,Supermarket,25,1471,1,1987,North,0,74,2.5,1,1,9.3,29732.0,2.436813531780132
+9,FamilyMarket Chicago Plaza,Chicago,Supermarket,28,972,0,2006,East,0,30,3.2,0,5,12.1,14986.0,0.8004934352896486
+10,CornerShop San Diego Plaza,San Diego,Convenience,7,475,1,2006,North,2013,18,2.9,1,3,5.2,8240.0,1.9903371355316808
+11,Pavilion Dallas Mall,Dallas,Department,77,3345,0,2012,Central,2020,130,3.3,1,5,15.5,67611.0,0.8048688584992537
+12,DailyGrocer Phoenix Point,Phoenix,Supermarket,16,879,0,1985,South,2013,28,2.2,0,5,21.9,10669.0,0.8031957846820749
+13,EasyBuy Chicago Mall,Chicago,Convenience,3,374,1,2016,South,0,21,2.1,1,5,2.7,8073.0,1.518565355984818
+14,BigBox Austin Point,Austin,Hypermarket,93,4131,0,2018,South,2018,175,3.9,1,4,1.1,61982.0,0.3
+15,CityFood Phoenix Center,Phoenix,Supermarket,27,1002,0,2002,East,0,31,3.4,0,1,2.8,12162.0,0.3
+16,TheGalleria Chicago Square,Chicago,Department,30,1448,0,1995,Central,0,58,3.1,0,3,3.4,22324.0,0.7363433386347682
+17,QuickStop Chicago Park,Chicago,Convenience,15,708,0,2003,North,2012,41,2.7,1,4,9.8,15282.0,0.49088371692911764
+18,NeighborStore Philadelphia Market,Philadelphia,Convenience,7,150,1,2002,West,2019,12,2.8,0,4,14.5,2754.0,1.6206423764748477
+19,FamilyMarket Houston Market,Houston,Supermarket,49,2050,0,2012,North,0,90,3.2,1,3,22.3,39514.0,0.5394411040118704
+20,MetroPoint New York Park,New York,Hypermarket,106,4805,0,2012,West,2012,205,3.5,0,4,21.2,61612.0,0.34264055318356407
+21,GreenWay New York Park,New York,Supermarket,50,2355,1,1986,North,2016,107,2.6,0,3,5.2,37746.0,4.0
+22,NeighborStore Los Angeles Market,Los Angeles,Convenience,6,288,0,2015,Central,2016,21,3.1,0,3,6.1,5797.0,0.9968064398582333
+23,TheGalleria Dallas Plaza,Dallas,Department,74,3380,0,1986,West,2016,136,3.2,0,3,1.3,68318.0,1.2979360957596744
+24,SuperSaver New York Plaza,New York,Hypermarket,76,3351,0,2022,East,0,130,3.7,1,2,8.9,42968.0,0.338824377066726
+25,EcoBazaar Houston Center,Houston,Hypermarket,87,4187,1,2013,North,2021,168,3.2,0,4,1.7,64565.0,0.748305133223277
+26,GreenWay Los Angeles Park,Los Angeles,Supermarket,48,2128,1,1985,North,2014,79,2.5,0,4,21.1,30597.0,1.349629797458043
+27,SuperSaver Houston Point,Houston,Hypermarket,105,4927,1,2015,West,2015,177,3.2,0,3,11.5,75976.0,0.43348667575059063
+28,QuickStop Los Angeles Center,Los Angeles,Convenience,11,321,1,1992,East,2010,10,2.7,1,4,21.2,6462.0,1.712797873076715
+29,CornerShop New York Square,New York,Convenience,3,162,1,2019,East,2019,10,3.2,1,2,4.7,3635.0,0.7113612998546479
+30,TownSquare Phoenix Mall,Phoenix,Department,70,3300,0,1997,Central,2016,126,2.8,0,1,12.8,40056.0,0.9393901650739135
+31,FreshMart Dallas Point,Dallas,Supermarket,51,2196,0,2015,East,2015,85,3.5,1,4,3.3,44386.0,0.7106779175741823
+32,NeighborStore Phoenix Plaza,Phoenix,Convenience,16,745,0,2019,East,0,28,2.8,1,2,13.1,12660.0,4.0
+33,Pavilion Houston Mall,Houston,Department,86,3373,0,1988,East,2014,148,3.8,0,4,12.4,65016.0,1.206655517801494
+34,HeritageMall Phoenix Mall,Phoenix,Department,19,1242,0,2003,South,2017,46,2.6,1,1,0.5,15076.0,0.47145112724307836
+35,CityFood Austin Mall,Austin,Supermarket,28,1270,0,2003,Central,2014,64,3.3,1,5,3.3,23819.0,2.5607249983888796
+36,NeighborStore San Antonio Plaza,San Antonio,Convenience,16,478,1,1996,North,0,0,3.0,0,1,14.4,8326.0,0.4070744098873833
+37,MetroPlaza Philadelphia Plaza,Philadelphia,Department,40,1960,0,2006,West,2019,91,2.7,1,4,16.5,25704.0,1.4739962291253605
+38,CornerShop Phoenix Square,Phoenix,Convenience,8,568,0,1999,North,2017,35,2.3,1,4,15.9,9652.0,0.3
+39,NeighborStore Austin Point,Austin,Convenience,12,755,1,1997,Central,2010,39,3.2,0,1,21.4,19824.0,0.369587616835594
+40,HeritageMall Phoenix Point,Phoenix,Department,61,3135,1,2017,West,2017,105,3.7,0,3,10.4,38053.0,1.4581596286762062
+41,BigBox San Diego Mall,San Diego,Hypermarket,64,2589,0,1990,Central,2018,113,2.7,1,2,23.7,25664.0,2.3741035699282698
+42,TownSquare San Diego Point,San Diego,Department,32,1559,0,1994,East,2015,61,3.2,1,4,8.0,19318.0,1.42508498860857
+43,ValueStore Dallas Center,Dallas,Supermarket,37,1771,0,2018,West,2018,45,3.4,1,5,6.0,35796.0,1.1006672049156447
+44,CityCenter Phoenix Park,Phoenix,Department,22,1480,1,1989,East,2018,72,3.3,1,2,19.0,17965.0,0.9314681086967257
+45,MetroPoint San Diego Center,San Diego,Hypermarket,50,2614,0,2010,North,2010,119,3.7,1,1,12.3,25912.0,0.32281696399106224
+46,Pavilion Chicago Center,Chicago,Department,48,1866,0,2017,North,2018,55,3.3,1,2,2.1,28769.0,0.6389942727002107
+47,EasyBuy San Antonio Point,San Antonio,Convenience,7,286,0,2013,West,0,13,2.6,1,5,22.4,4982.0,0.8068843787801264
+48,FreshMart Houston Park,Houston,Supermarket,49,1945,0,2016,West,0,91,2.9,1,5,19.2,37491.0,3.162649113946257
+49,CornerShop Houston Point,Houston,Convenience,20,696,0,2014,Central,0,40,2.6,0,4,13.4,18782.0,1.664053445564047
+50,MetroPlaza Dallas Park,Dallas,Department,22,1260,0,2010,Central,2012,58,3.1,1,3,23.5,25468.0,0.3
+51,HeritageMall San Antonio Center,San Antonio,Department,61,2228,1,2013,East,0,62,3.4,1,1,17.7,27720.0,1.6350535767312708
+52,ValueStore New York Park,New York,Supermarket,64,2471,0,2003,West,2010,106,2.8,0,3,5.7,39606.0,0.8636617737613778
+53,FreshMart San Antonio Mall,San Antonio,Supermarket,30,1497,1,2001,North,2013,57,3.3,1,2,5.0,18625.0,0.6641615902679664
+54,CityCenter San Antonio Plaza,San Antonio,Department,23,1881,1,2020,Central,2020,85,3.2,1,4,6.0,23403.0,2.1180771236670206
+55,DailyGrocer Philadelphia Square,Philadelphia,Supermarket,42,2001,0,2013,Central,2013,82,3.1,1,4,12.6,26242.0,3.089161115042862
+56,TheGalleria Phoenix Center,Phoenix,Department,78,3480,0,2016,North,2023,139,3.3,0,4,6.5,42241.0,2.8239937521147103
+57,EcoBazaar San Diego Plaza,San Diego,Hypermarket,74,3477,1,1990,Central,0,145,3.4,0,1,6.3,34467.0,0.5739024924344293
+58,SuperSaver Phoenix Square,Phoenix,Hypermarket,76,3508,1,2007,East,2016,138,2.9,0,2,12.3,34065.0,0.9246951732010751
+59,TownSquare Phoenix Plaza,Phoenix,Department,46,2301,0,2006,West,2017,91,2.7,1,5,10.6,27930.0,1.6456527076127754
+60,MetroPlaza Phoenix Point,Phoenix,Department,70,2953,0,2007,North,0,112,2.8,1,4,20.6,35844.0,2.938768495192942
+61,CornerShop Houston Square,Houston,Convenience,5,227,1,1996,West,0,0,2.2,0,1,22.5,6126.0,0.7935356487524763
+62,24Seven Dallas Market,Dallas,Convenience,17,559,0,2022,Central,2022,28,2.7,1,4,10.4,15818.0,1.033454341870361
+63,BigBox San Diego Square,San Diego,Hypermarket,113,4826,0,2001,Central,2011,184,3.7,1,4,20.1,47839.0,0.4512645723295304
+64,CornerShop Philadelphia Mall,Philadelphia,Convenience,3,281,1,1989,North,2016,9,2.1,0,5,8.5,5159.0,0.4162014164766801
+65,CityCenter Chicago Mall,Chicago,Department,73,3461,1,1996,East,2016,141,3.7,1,3,23.7,53359.0,2.5377382717453707
+66,MetroPoint Houston Park,Houston,Hypermarket,92,4321,0,2014,South,0,151,3.2,0,5,0.8,66631.0,4.0
+67,CityFood Houston Center,Houston,Supermarket,46,1531,0,2013,North,0,42,3.5,0,4,14.0,29511.0,1.1447552864936144
+68,FamilyMarket Houston Plaza,Houston,Supermarket,35,1551,0,2020,South,2020,59,3.5,0,3,7.7,29896.0,3.0137332966068793
+69,TownSquare Chicago Park,Chicago,Department,31,1247,0,2020,South,2022,54,2.5,1,4,3.9,19225.0,1.691257647917459
+70,ExpressMarts Dallas Market,Dallas,Convenience,3,444,1,1995,East,2011,25,2.6,1,5,2.6,12564.0,0.6834458987921063
+71,HeritageMall Philadelphia Market,Philadelphia,Department,50,2249,0,1999,South,2021,74,2.5,1,5,2.9,29494.0,1.6908917372603454
+72,NeighborStore Chicago Mall,Chicago,Convenience,19,675,0,2017,South,2021,33,2.9,0,5,5.6,14569.0,4.0
+73,EcoBazaar San Antonio Mall,San Antonio,Hypermarket,68,2896,1,1992,East,2011,113,3.4,0,1,16.0,28825.0,1.1826486772866245
+74,FreshMart New York Market,New York,Supermarket,29,1189,0,1985,South,2020,38,2.6,0,1,7.0,19057.0,4.0
+75,FamilyMarket San Diego Park,San Diego,Supermarket,53,2417,1,2005,South,2021,90,3.2,0,5,14.4,29949.0,0.3
+76,BigBox Houston Park,Houston,Hypermarket,92,4135,0,1992,South,2011,173,3.2,1,5,15.9,63763.0,2.5592448997268353
+77,MegaMart San Diego Market,San Diego,Hypermarket,55,2895,1,1998,North,0,118,2.8,1,5,12.1,28698.0,1.3209383581280163
+78,GreenWay Dallas Square,Dallas,Supermarket,29,1508,0,1991,North,0,60,3.1,0,2,18.9,30480.0,0.9332271783671822
+79,EcoBazaar San Diego Mall,San Diego,Hypermarket,58,2575,1,2014,North,2014,105,3.0,1,3,4.0,25525.0,1.3265541279900896
+80,EasyBuy New York Park,New York,Convenience,10,652,0,1997,East,2011,35,2.8,1,1,1.7,14631.0,0.3
+81,HeritageMall San Diego Park,San Diego,Department,46,1925,0,2019,Central,2019,76,3.0,1,4,7.6,23853.0,1.002297937166043
+82,MetroPoint Houston Market,Houston,Hypermarket,73,3217,0,2000,South,0,129,3.9,0,5,15.0,49607.0,1.6843863514546311
+83,TheGalleria Austin Park,Austin,Department,44,1673,1,2012,South,2012,78,2.6,1,2,2.1,31377.0,4.0
+84,EcoBazaar Chicago Park,Chicago,Hypermarket,91,3890,0,1999,East,0,152,3.4,0,3,11.0,47979.0,0.7660995196654705
+85,MetroPlaza Philadelphia Market,Philadelphia,Department,75,3325,0,2019,South,2019,139,3.5,1,4,12.5,43605.0,0.589993214731334
+86,EcoBazaar Chicago Point,Chicago,Hypermarket,78,3384,0,2022,North,2022,130,3.2,0,4,14.9,41738.0,0.7775702080785182
+87,CornerShop San Diego Market,San Diego,Convenience,17,540,0,1991,Central,2014,17,3.3,0,1,13.5,9368.0,2.783925288074296
+88,CornerShop Philadelphia Point,Philadelphia,Convenience,4,328,0,2010,West,0,12,2.9,0,1,10.7,6022.0,1.6419359429929483
+89,BigBox San Antonio Park,San Antonio,Hypermarket,79,3667,0,2015,South,2015,151,3.6,1,1,17.8,36499.0,0.7582181155171659
+90,EcoBazaar Los Angeles Center,Los Angeles,Hypermarket,78,3562,1,2004,North,0,154,3.7,1,5,14.8,40972.0,1.9385508119943782
+91,NeighborStore Philadelphia Park,Philadelphia,Convenience,12,649,1,1997,West,2023,26,3.3,0,5,3.1,11916.0,1.3329170276202227
+92,MetroPlaza Philadelphia Point,Philadelphia,Department,68,2846,1,2002,Central,0,98,3.7,0,4,24.5,37323.0,2.9205749321753633
+93,24Seven Phoenix Mall,Phoenix,Convenience,14,772,1,1992,West,2023,37,3.0,1,2,14.2,13119.0,0.6493082039430947
+94,FreshMart Phoenix Square,Phoenix,Supermarket,27,976,1,2002,North,0,63,3.2,0,5,15.1,11847.0,0.9094675760716633
+95,24Seven Austin Center,Austin,Convenience,12,627,1,1997,West,0,26,2.3,0,3,18.4,16463.0,0.8582178238025596
+96,GlobalHyper Phoenix Center,Phoenix,Hypermarket,83,3656,1,2009,East,0,129,2.9,0,1,13.7,35502.0,0.3272066163567079
+97,BigBox New York Park,New York,Hypermarket,83,3738,1,2016,West,2016,151,3.5,1,2,19.4,47931.0,1.5944171549460882
+98,CityFood Dallas Square,Dallas,Supermarket,40,2040,0,2006,South,2016,81,2.4,1,2,6.9,41233.0,1.5448854187248708
+99,MetroPlaza Austin Park,Austin,Department,37,1684,0,2019,South,2019,66,2.9,1,3,20.3,31584.0,1.2270367433712053
+100,CornerShop Austin Plaza,Austin,Convenience,14,590,0,2004,East,2014,33,2.4,1,5,14.1,15492.0,0.9889332717724444
+101,FamilyMarket San Diego Mall,San Diego,Supermarket,32,1488,0,2014,North,0,73,2.8,1,3,4.5,18438.0,0.3416960540764863
+102,CityFood Austin Point,Austin,Supermarket,44,2284,1,1989,South,2023,98,3.4,0,3,4.8,42837.0,0.836456476419891
+103,BigBox New York Point,New York,Hypermarket,90,3697,0,1997,Central,0,146,4.0,1,2,8.2,47405.0,0.8972299772644878
+104,HeritageMall Chicago Point,Chicago,Department,55,2496,0,2014,South,2014,111,2.6,1,3,18.7,38482.0,0.59330330078513
+105,CityFood Dallas Center,Dallas,Supermarket,38,1922,0,2002,South,2015,61,3.0,0,4,1.7,38848.0,1.0563746023996268
+106,CityFood Phoenix Park,Phoenix,Supermarket,37,1310,1,1985,North,2011,45,3.4,1,5,24.5,15901.0,1.757066700373744
+107,EcoBazaar Phoenix Center,Phoenix,Hypermarket,90,3916,0,2002,West,0,150,2.9,1,1,3.2,38026.0,4.0
+108,MetroPlaza New York Market,New York,Department,32,1736,0,1991,South,2022,69,3.3,0,4,15.0,27825.0,1.4292074095373002
+109,TownSquare Houston Plaza,Houston,Department,70,3392,1,1990,East,2014,140,3.1,1,5,5.9,65382.0,1.5400199203752603
+110,FreshMart San Antonio Market,San Antonio,Supermarket,28,1317,0,2021,West,2021,50,2.7,1,1,15.9,16386.0,1.142248485776384
+111,MetroPlaza Austin Center,Austin,Department,63,2803,1,1996,Central,2019,103,3.8,0,4,1.1,52571.0,0.3
+112,TownSquare Philadelphia Square,Philadelphia,Department,31,1266,0,2021,North,2021,60,2.5,0,2,12.0,16603.0,1.1926020445818788
+113,HeritageMall Dallas Park,Dallas,Department,36,1432,0,2016,Central,2020,54,3.2,1,1,4.9,28944.0,1.289438934088552
+114,EasyBuy Houston Square,Houston,Convenience,6,164,0,1998,West,2013,7,3.0,1,3,17.1,4426.0,4.0
+115,TownSquare Philadelphia Market,Philadelphia,Department,59,2369,0,2011,West,0,100,2.6,1,2,8.8,31068.0,1.0272395250984647
+116,EasyBuy San Antonio Park,San Antonio,Convenience,18,797,0,2015,West,2015,32,3.0,1,3,14.7,13882.0,1.6022239102918678
+117,MetroPoint Chicago Park,Chicago,Hypermarket,62,2999,0,2002,Central,2022,120,3.8,1,2,19.1,36989.0,1.1838352824900782
+118,TheGalleria Chicago Center,Chicago,Department,29,1310,1,2012,West,0,62,2.4,1,3,21.5,20197.0,0.42664191085325387
+119,FamilyMarket Phoenix Center,Phoenix,Supermarket,32,1476,0,1991,Central,2019,60,3.4,1,3,1.1,17916.0,3.416240006811655
+120,NeighborStore San Diego Market,San Diego,Convenience,3,473,1,1999,West,0,27,2.8,1,3,24.4,8205.0,2.403052320280601
+121,ExpressMarts San Antonio Mall,San Antonio,Convenience,3,279,1,2013,East,2023,16,2.8,1,3,11.9,4860.0,2.4891188001998144
+122,HeritageMall Austin Park,Austin,Department,62,2741,1,2011,West,2020,129,3.4,1,1,1.9,51408.0,0.5387795934068522
+123,FamilyMarket San Diego Center,San Diego,Supermarket,41,1968,0,2017,Central,2017,82,2.8,1,2,13.3,24385.0,4.0
+124,ValueStore San Diego Square,San Diego,Supermarket,39,1908,0,1997,South,0,82,3.5,1,4,17.5,23642.0,0.3458791105281302
+125,Pavilion Austin Point,Austin,Department,75,3175,0,1993,West,2015,138,3.9,0,3,5.8,59547.0,2.0712895501954525
+126,SuperSaver Houston Plaza,Houston,Hypermarket,77,3705,1,1995,South,2013,148,3.5,0,2,24.6,57132.0,4.0
+127,EasyBuy San Diego Plaza,San Diego,Convenience,8,218,1,1998,East,2012,2,3.0,0,1,9.5,3782.0,0.5008329369856419
+128,SuperSaver Phoenix Point,Phoenix,Hypermarket,50,2590,0,1986,North,2020,98,3.2,0,5,12.0,25150.0,0.7336905328509485
+129,NeighborStore San Diego Mall,San Diego,Convenience,22,403,1,2011,East,2014,11,2.7,0,2,6.1,6991.0,1.3360082210537632
+130,ExpressMarts Phoenix Park,Phoenix,Convenience,14,699,0,2011,West,0,18,2.9,0,3,21.2,11878.0,0.7763684314279797
+131,DailyGrocer New York Point,New York,Supermarket,48,2269,1,2011,South,0,93,3.1,1,4,12.5,36368.0,0.30252326724416745
+132,EasyBuy Philadelphia Center,Philadelphia,Convenience,9,172,0,2019,South,0,0,2.8,0,4,13.3,3158.0,1.2991454177272659
+133,DailyGrocer Austin Plaza,Austin,Supermarket,35,1680,0,1986,Central,2023,69,3.3,1,5,16.8,31509.0,0.469506403075425
+134,Pavilion San Antonio Square,San Antonio,Department,59,2360,0,2005,South,2017,92,3.1,0,2,8.7,29362.0,1.8705512762808634
+135,GreenWay Los Angeles Square,Los Angeles,Supermarket,20,833,0,1991,Central,2011,32,2.2,1,5,3.2,11977.0,0.5339346579970091
+136,MegaMart Dallas Plaza,Dallas,Hypermarket,78,3581,0,1986,North,2023,148,3.0,1,5,20.6,57905.0,4.0
+137,FreshMart Austin Market,Austin,Supermarket,18,894,1,2004,West,0,30,2.7,1,5,12.9,16767.0,0.6035490516621776
+138,MetroPlaza Phoenix Square,Phoenix,Department,37,1428,1,2009,Central,2016,63,3.2,0,5,20.3,17333.0,0.914063381647301
+139,CityCenter San Diego Plaza,San Diego,Department,48,2119,0,2020,North,0,100,3.2,0,3,22.6,26257.0,2.5400035930922757
+140,NeighborStore Chicago Market,Chicago,Convenience,10,359,1,2011,South,2012,17,2.9,0,2,21.7,7749.0,0.40341967376179705
+141,GreenWay San Diego Square,San Diego,Supermarket,26,1049,0,1988,South,0,34,2.8,1,3,18.7,12998.0,1.4988736726362426
+142,HeritageMall San Diego Center,San Diego,Department,37,1667,0,2002,North,2016,60,3.1,0,4,10.4,20656.0,3.960730503577604
+143,NeighborStore New York Point,New York,Convenience,16,609,1,1996,South,0,21,2.5,1,1,24.1,13666.0,0.3
+144,GlobalHyper New York Park,New York,Hypermarket,99,4496,0,2020,North,0,173,3.5,1,5,6.9,57650.0,1.4422010775813099
+145,CornerShop Phoenix Market,Phoenix,Convenience,10,473,1,1998,Central,0,9,3.0,0,1,9.0,8038.0,1.5432560688914991
+146,SuperSaver Dallas Mall,Dallas,Hypermarket,54,2689,0,2003,Central,0,109,3.6,0,4,6.5,43481.0,2.468573823775566
+147,FreshMart Dallas Park,Dallas,Supermarket,25,1067,0,2015,North,0,40,2.8,1,4,5.3,21567.0,0.4012158810556667
+148,SuperSaver Dallas Point,Dallas,Hypermarket,73,3714,1,2009,Central,2019,150,2.8,1,5,7.7,60055.0,0.37216761368100754
+149,Pavilion Dallas Center,Dallas,Department,64,2829,0,2008,Central,0,125,2.8,1,5,18.4,57181.0,1.9537437603218293
+150,Pavilion San Diego Park,San Diego,Department,70,3221,1,1998,Central,2020,126,2.7,0,2,19.3,39911.0,1.5956580248268435
