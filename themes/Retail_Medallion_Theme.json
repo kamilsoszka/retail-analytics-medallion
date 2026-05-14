@@ -1,0 +1,206 @@
+{
+  "name": "Retail Medallion",
+  "dataColors": [
+    "#2878BD", "#FCB714", "#0EB194", "#108372", "#F15628",
+    "#6F9EDB", "#FEE266", "#5DA9FD", "#4AC5BB", "#35B895",
+    "#B69087", "#B6A887", "#F48459", "#1D5C95", "#BDA750",
+    "#4A82BB", "#168980", "#288A6F", "#A67668", "#7B6E4F",
+    "#B54C25", "#164672", "#7E6F36", "#31567D", "#0F5C55",
+    "#0D2E25", "#7B594F", "#524934", "#793418"
+  ],
+  "foreground": "#252423",
+  "foregroundNeutralSecondary": "#605E5C",
+  "foregroundNeutralTertiary": "#8A8886",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F9F9F9",
+  "backgroundNeutral": "#E6E6E6",
+  "tableAccent": "#2878BD",
+  "maximum": "#2878BD",
+  "center": "#FCB714",
+  "minimum": "#D0E4F5",
+  "hyperlink": "#2878BD",
+  "visitedHyperlink": "#6F9EDB",
+  "textClasses": {
+    "callout": {
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "title": {
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "header": {
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ],
+        "visualHeader": [
+          {
+            "foreground": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "border": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            },
+            "background": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ],
+        "outspacePane": [
+          {
+            "backgroundColor": {
+              "solid": {
+                "color": "#F9F9F9"
+              }
+            },
+            "foregroundColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "transparency": 0,
+            "border": true,
+            "borderColor": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            }
+          }
+        ],
+        "filterCard": [
+          {
+            "$id": "Applied",
+            "transparency": 0,
+            "foregroundColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "backgroundColor": {
+              "solid": {
+                "color": "#F9F9F9"
+              }
+            },
+            "inputBoxColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "borderColor": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            },
+            "border": true
+          },
+          {
+            "$id": "Available",
+            "transparency": 0,
+            "foregroundColor": {
+              "solid": {
+                "color": "#605E5C"
+              }
+            },
+            "backgroundColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "inputBoxColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "borderColor": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            },
+            "border": true
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "items": [
+          {
+            "background": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ],
+        "numericInputStyle": [
+          {
+            "background": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "keyDriversVisual": {
+      "*": {
+        "keyInfluencersVisual": [
+          {
+            "canvasColor": {
+              "solid": {
+                "color": "#F9F9F9"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "outspace": [
+          {
+            "color": {
+              "solid": {
+                "color": "#F9F9F9"
+              }
+            }
+          }
+        ],
+        "background": [
+          {
+            "transparency": 0,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
