@@ -20,3 +20,5 @@ We built **10 analytical views** (`001` to `010`) that answer key business quest
 6. Connect Power BI using DirectQuery and use the provided DAX measures.  
 
 **Business insights from the gold views** (short version): Kids products have >30% margin; BOGO promotions are the only consistently profitable type; Champions (53k) and Big Spenders (16k) generate 85% of LTV; online accounts for 65% of returns (defective 24%, late delivery 20%); fast delivery cuts returns by 80%; in‑store is the only profitable channel (+$32 margin/transaction); December drives Electronics ($269M) and Home ($98M); 483 products (24%) contribute 80% of total margin; products with warranty generate twice the revenue and have 30% lower return rates. All scripts are in the `sql/` folder, the generator is in `generator.py`, and the Python verification script can be run after data generation. Enjoy! 🛒📊
+
+<img width="1297" height="727" alt="retail_analytics" src="https://github.com/user-attachments/assets/9a109165-7dc8-4375-be41-6113827ffc89" />
