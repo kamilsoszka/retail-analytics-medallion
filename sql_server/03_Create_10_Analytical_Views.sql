@@ -1,5 +1,5 @@
 -- ========================================================================
--- ANALYTICAL VIEWS (compatible with Python v46 – no dimmanager, no denormalized columns)
+-- ANALYTICAL VIEWS (compatible with final schema – no dimmanager)
 -- ========================================================================
 
 USE retailanalytics;
@@ -20,8 +20,6 @@ GO
 
 -- ========================================================================
 -- VIEW 001: Product and Category Margin Analysis
--- Purpose: Shows profitability per product and ranks products within each category.
--- Business value: Identify most and least profitable products, optimize pricing and assortment.
 -- ========================================================================
 CREATE VIEW dbo.[001_vw_product_category_margin]
 AS
@@ -52,8 +50,6 @@ GO
 
 -- ========================================================================
 -- VIEW 002: Promotion Performance (Uplift & Margin)
--- Purpose: Compares promotions' impact on revenue and margin relative to baseline (no promotion).
--- Business value: Optimize marketing spend, eliminate loss-making promotions, scale successful ones.
 -- ========================================================================
 CREATE VIEW dbo.[002_vw_promo_performance]
 AS
@@ -95,8 +91,6 @@ GO
 
 -- ========================================================================
 -- VIEW 003: Customer RFM Segmentation & LTV
--- Purpose: Segments customers into Recency, Frequency, Monetary groups and calculates average LTV per segment.
--- Business value: Target marketing campaigns (retain Champions, win back At Risk), improve customer lifetime value.
 -- ========================================================================
 CREATE VIEW dbo.[003_vw_customer_rfm_segments]
 AS
@@ -147,8 +141,6 @@ GO
 
 -- ========================================================================
 -- VIEW 004: Returns Analysis by Channel and Reason
--- Purpose: Breakdown of returns by sales channel and return reason.
--- Business value: Identify operational issues (defective, late delivery) and improve product quality & logistics.
 -- ========================================================================
 CREATE VIEW dbo.[004_vw_returns_analysis]
 AS
@@ -166,8 +158,6 @@ GO
 
 -- ========================================================================
 -- VIEW 005: Sales Channel Performance
--- Purpose: Compares channels on key metrics: basket value, margin after shipping, return rate.
--- Business value: Optimize channel strategy, improve online profitability, leverage in-store advantages.
 -- ========================================================================
 CREATE VIEW dbo.[005_vw_channel_performance]
 AS
@@ -187,8 +177,6 @@ GO
 
 -- ========================================================================
 -- VIEW 006: Seasonal Category Revenue
--- Purpose: Monthly revenue per product category, with rank per category.
--- Business value: Plan inventory, promotions, and staffing around seasonal peaks (e.g., Dec for Electronics, July for Sports).
 -- ========================================================================
 CREATE VIEW dbo.[006_vw_seasonal_category_revenue]
 AS
@@ -208,8 +196,6 @@ GO
 
 -- ========================================================================
 -- VIEW 007: Store Performance by Region and Type
--- Purpose: Aggregated store performance metrics by region and store type.
--- Business value: Identify top-performing regions/store types and underperformers for resource allocation.
 -- ========================================================================
 CREATE VIEW dbo.[007_vw_store_performance_by_region_type]
 AS
@@ -231,8 +217,6 @@ GO
 
 -- ========================================================================
 -- VIEW 008: Pareto (80/20) Margin Analysis
--- Purpose: Counts how many products contribute to the first 80% of total margin.
--- Business value: Focus on high-impact products, apply 80/20 rule to assortment management.
 -- ========================================================================
 CREATE VIEW dbo.[008_vw_pareto_margin_analysis]
 AS
@@ -264,10 +248,8 @@ GO
 
 -- ========================================================================
 -- VIEW 009: Delivery Speed Impact on Returns
--- Purpose: Return rate by delivery speed (fast, standard, long) for online/mobile channels.
--- Business value: Quantify financial impact of slow deliveries, justify logistics investments.
 -- ========================================================================
-CREATE OR ALTER VIEW [dbo].[009_vw_delivery_speed_impact]
+CREATE VIEW dbo.[009_vw_delivery_speed_impact]
 AS
 WITH delivery_groups AS (
     SELECT
@@ -298,8 +280,6 @@ GO
 
 -- ========================================================================
 -- VIEW 010: Warranty & Eco-friendly Impact
--- Purpose: Compares average revenue and return rate for products with/without warranty and eco-friendly certification.
--- Business value: Assess effectiveness of warranty and eco-labelling in driving revenue and reducing returns.
 -- ========================================================================
 CREATE VIEW dbo.[010_vw_warranty_eco_impact]
 AS
@@ -318,7 +298,7 @@ GO
 -- ========================================================================
 -- Confirmation (lists all views and their row counts)
 -- ========================================================================
-SELECT 'All analytical views created successfully (compatible with Python v46).' AS status;
+SELECT 'All analytical views created successfully (compatible with final schema).' AS status;
 SELECT '001_vw_product_category_margin' AS ViewName, COUNT(*) AS RecordCount FROM [001_vw_product_category_margin]
 UNION ALL SELECT '002_vw_promo_performance', COUNT(*) FROM [002_vw_promo_performance]
 UNION ALL SELECT '003_vw_customer_rfm_segments', COUNT(*) FROM [003_vw_customer_rfm_segments]
@@ -332,72 +312,28 @@ UNION ALL SELECT '010_vw_warranty_eco_impact', COUNT(*) FROM [010_vw_warranty_ec
 GO
 
 -- ========================================================================
--- Final explanatory comment (printed after script execution)
+-- Final explanatory comment
 -- ========================================================================
 PRINT '
 ================================================================================
-ANALYTICAL VIEWS CREATED – WHAT THEY DO AND THEIR BUSINESS VALUE
+ANALYTICAL VIEWS CREATED – BUSINESS VALUE
 
 This script creates 10 analytical views on top of the retailanalytics database
-(compatible with Python v46 – no dimmanager, no denormalized columns). Each view
-answers a specific business question and is ready to be used in Power BI or other
-reporting tools.
+(compatible with final schema – no dimmanager, no denormalized columns). Each view
+answers a specific business question and is ready to be used in Power BI.
 
-List of views and their purpose:
+List of views:
 
-001_vw_product_category_margin
-  Shows total revenue, cost, margin and margin percent for each product, ranked
-  within its category.
-  Business use: Optimize pricing, discontinue low‑margin products, identify stars.
-
-002_vw_promo_performance
-  Compares promotions against baseline (no promotion). Calculates uplift percent,
-  margin percent, and ranks promotions.
-  Business use: Stop loss‑making discounts, invest in high‑uplift promotions (e.g., BOGO).
-
-003_vw_customer_rfm_segments
-  Segments customers into Champions, Loyal, Big Spenders, At Risk, Lost, Others
-  based on recency, frequency, monetary value and margin.
-  Business use: Targeted marketing, retention campaigns, calculate customer lifetime value.
-
-004_vw_returns_analysis
-  Returns broken down by channel and reason, including share of channel returns and
-  shipping cost.
-  Business use: Reduce defects, improve delivery performance, optimise return policies.
-
-005_vw_channel_performance
-  Compares sales channels (Online, Mobile App, In-Store, Phone Order) on key metrics:
-  basket value, margin after shipping, return rate.
-  Business use: Allocate marketing spend, improve digital channel profitability.
-
-006_vw_seasonal_category_revenue
-  Monthly revenue per product category with rank. Reveals seasonality (e.g., Electronics
-  peak in December, Sports in July).
-  Business use: Plan inventory, staff, and promotions ahead of seasonal peaks.
-
-007_vw_store_performance_by_region_type
-  Aggregates store revenue, margin, unique customers, rating, size by region and store type.
-  Business use: Identify best‑performing store formats and regions for expansion.
-
-008_vw_pareto_margin_analysis
-  Counts products that generate the first 80% of total margin (Pareto principle).
-  Business use: Focus assortment and marketing on the vital few products.
-
-009_vw_delivery_speed_impact
-  Return rate by delivery speed (fast, standard, long) for online/mobile channels.
-  Business use: Justify investments in faster delivery, reduce return costs.
-
-010_vw_warranty_eco_impact
-  Compares revenue and return rate between products with/without warranty and
-  eco‑friendly certification.
-  Business use: Assess whether warranty or eco‑labelling provides financial benefit.
-
-Why these views are valuable:
-- They are pre‑aggregated and optimised for reporting, saving time in Power BI.
-- Each view encapsulates complex business logic, ensuring consistency across reports.
-- They are built on top of a properly normalised star schema, guaranteeing correct joins.
-- The use of percentage columns as fractions (e.g., 0.15 = 15%) allows easy formatting
-  in Power BI.
+001_vw_product_category_margin – Product profitability, ranking within category.
+002_vw_promo_performance – Promo uplift and margin vs. baseline.
+003_vw_customer_rfm_segments – Customer segmentation (Champions, At Risk, etc.).
+004_vw_returns_analysis – Returns by channel and reason.
+005_vw_channel_performance – Channel comparison (basket, margin, return rate).
+006_vw_seasonal_category_revenue – Monthly revenue per category, seasonal peaks.
+007_vw_store_performance_by_region_type – Store revenue, margin, rating by region/type.
+008_vw_pareto_margin_analysis – Number of products contributing to first 80% margin.
+009_vw_delivery_speed_impact – Return rate by delivery speed (online/mobile).
+010_vw_warranty_eco_impact – Revenue and returns by warranty/eco certification.
 
 All views have been tested and are compatible with the final database schema.
 ================================================================================
