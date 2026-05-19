@@ -111,3 +111,5 @@ This project is part of a portfolio. Issues and pull requests are welcome.
 MIT © 2025 Kamil Soszka
 
 **Last update: 2025-05-19**
+
+<img width="1302" height="727" alt="retailanalytics_chart" src="https://github.com/user-attachments/assets/a77e8092-d757-477d-86ef-f8cd00a87b2f" />
