@@ -1,9 +1,16 @@
+# =====================================================================
+# generator.py
+# Retail Data Generator – 5M rows
+# Last updated: 2026-05-19
+# =====================================================================
+
 """
-Realistic Retail Data Generator - 5M Rows Edition (COMPLETE & FINAL)
-- END_DATE = today (dynamic)
-- In-Store deliverydays = 0 (guaranteed by correct order: clip THEN override)
-- All dimensions and fact table included
-- No manual SQL fixes needed
+Realistic Retail Data Generator - 5M Rows Edition (FINAL WORKING)
+- END_DATE = today
+- In-Store deliverydays = 0 (guaranteed using np.where after clipping)
+- Overwrites existing CSV (deletes old file before writing)
+- No dummy promotion (NULL = no promotion)
+- Self-verifies generated CSV
 """
 
 import numpy as np
@@ -37,7 +44,7 @@ END_DATE = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 print(f"Generating data from {START_DATE.date()} to {END_DATE.date()}")
 
 # =====================================================================
-# NAME LISTS (FULL)
+# NAME LISTS (full)
 # =====================================================================
 STORE_CHAINS = {
     'Supermarket': ['FreshMart', 'CityFood', 'DailyGrocer', 'MarketPlace', 'ValueSave', 'GoodMart'],
@@ -95,7 +102,7 @@ CATEGORY_CFG = {
 print("Generating dimensions...")
 
 # =====================================================================
-# DIMENSION: STORES
+# DIMENSION: STORES (unchanged)
 # =====================================================================
 store_type_list = []
 while len(store_type_list) < N_STORES:
@@ -163,7 +170,7 @@ store_df['renovationyear'] = renov
 store_df.to_csv(f"{OUTPUT_DIR}/dim_store.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: PRODUCTS
+# DIMENSION: PRODUCTS (with isactive fix)
 # =====================================================================
 product_pool = []
 while len(product_pool) < N_PRODUCTS * 1.5:
@@ -226,7 +233,6 @@ product_isdiscontinued = np.where(product_releaseyear < 2021, np.random.choice([
 product_rating = np.clip(2.0 + np.random.normal(0, 0.8, N_PRODUCTS), 1.0, 5.0).round(1)
 product_name = unique_product_names
 
-# FIX: discontinued products must not be active
 product_isactive = np.where(product_isdiscontinued == 1, 0, product_isactive)
 
 product_df = pd.DataFrame({
@@ -260,27 +266,8 @@ if not product_df['name'].is_unique:
 product_df.to_csv(f"{OUTPUT_DIR}/dim_product.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: PROMOTIONS (including dummy promo 0)
+# DIMENSION: PROMOTIONS – NO DUMMY ROW (only real promos 1..N_PROMOTIONS)
 # =====================================================================
-dummy_promo = pd.DataFrame([{
-    'promoid': 0,
-    'promoname': 'No Promotion',
-    'discount_pct': 0.0,
-    'discount_fixed': 0.0,
-    'type': 'None',
-    'isactive': 1,
-    'minspend': 0,
-    'channel': 'All',
-    'budget': 0,
-    'startdate': START_DATE.strftime('%Y-%m-%d'),
-    'enddate': END_DATE.strftime('%Y-%m-%d'),
-    'targetaudience': 'All',
-    'maxdiscountcap': 0,
-    'isstackable': 0,
-    'redemption_rate': 0,
-    'coderequired': 0,
-    'promoupliftfactor': 1.0
-}])
 promo_ids = np.arange(1, N_PROMOTIONS + 1)
 promo_types = np.random.choice(['Percentage','Fixed Amount','BOGO','Free Shipping'], N_PROMOTIONS, p=[0.35,0.25,0.25,0.15])
 promo_channels = np.where(promo_types == 'Free Shipping', 'Online', np.random.choice(['Email','SMS','App','InStore','All'], N_PROMOTIONS))
@@ -348,11 +335,10 @@ promo_df = pd.DataFrame({
     'coderequired': np.random.choice([0,1], N_PROMOTIONS, p=[0.60,0.40]),
     'promoupliftfactor': promo_uplift.round(3)
 })
-promo_df = pd.concat([dummy_promo, promo_df], ignore_index=True)
 promo_df.to_csv(f"{OUTPUT_DIR}/dim_promotion.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: CUSTOMERS
+# DIMENSION: CUSTOMERS (unchanged)
 # =====================================================================
 customer_ids = np.arange(1, N_CUSTOMERS + 1)
 gender_choice = np.random.choice(['Male','Female'], N_CUSTOMERS, p=[0.5, 0.5])
@@ -460,7 +446,7 @@ customer_df = pd.DataFrame({
 customer_df.to_csv(f"{OUTPUT_DIR}/dim_customer.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: DATE
+# DIMENSION: DATE (dynamic)
 # =====================================================================
 dates = pd.date_range(START_DATE, END_DATE, freq='D')
 isholiday_arr = (np.isin(dates.month, [12, 1]) | (dates.month == 7)).astype(int)
@@ -489,7 +475,7 @@ date_df.to_csv(f"{OUTPUT_DIR}/dim_date.csv", index=False, encoding='utf-8')
 print("Dimensions exported successfully ✓")
 
 # ============================================================================
-# MODERATE TREND GENERATION (SOFT LANDING + STABLE GROWTH)
+# MODERATE TREND GENERATION (unchanged)
 # ============================================================================
 print("Generating Moderate Trend Data...")
 n = len(dates)
@@ -565,7 +551,7 @@ print(f"End ({dates[-1].date()}): {daily_net_sales_target[-1]}")
 print("="*60)
 
 # ============================================================================
-# GENERATE FACT SALES (CHUNKED WRITING) – FINALLY CORRECT
+# GENERATE FACT SALES – WITH DELIVERYDAYS FIX (np.where)
 # ============================================================================
 print("\nGenerating fact_sales rows (5M) in chunks...")
 
@@ -619,6 +605,9 @@ current_buffer = []
 sales_id = 1
 
 f_path = f"{OUTPUT_DIR}/fact_sales.csv"
+if os.path.exists(f_path):
+    os.remove(f_path)
+
 pd.DataFrame(columns=['salesid', 'datekey', 'productid', 'customerid', 'storeid', 'promoid', 
                       'qty', 'unitprice', 'tax_rate', 'net', 'payment', 'channel', 
                       'grossvalue', 'discountamount', 'taxamount', 'shipcost', 'isreturn', 
@@ -636,7 +625,9 @@ for day_idx in range(n):
     prod_choices = np.random.choice(product_ids_arr, n_tr)
     cust_choices = np.random.choice(customer_ids_arr, n_tr, p=cust_weights)
     store_choices = np.random.choice(store_ids_arr, n_tr, p=store_weights)
-    promo_choices = np.random.choice(promo_ids_arr, n_tr, p=promo_weights)
+    
+    promo_has = np.random.choice([0,1], n_tr, p=[0.65, 0.35])
+    promo_choices = np.where(promo_has == 1, np.random.choice(promo_ids_arr, n_tr, p=promo_weights), None)
 
     daily_price_mult = 1.0 + 0.02 * np.sin(2 * np.pi * day_idx / 365)
     unit_prices = product_unitprice_arr[prod_choices - 1] * daily_price_mult
@@ -672,15 +663,10 @@ for day_idx in range(n):
     payment = np.random.choice(PAYMENT, n_tr)
     is_online = np.isin(channel, ['Online', 'Mobile App'])
 
-    # ========== CRITICAL FIX: CORRECT ORDER ==========
     delivery_days = np.ones(n_tr, dtype=int)
     if is_online.sum() > 0:
         delivery_days[is_online] = np.random.negative_binomial(2, 0.4, size=is_online.sum()) + 1
-    # First clip to ensure online days are 1-10
-    delivery_days = np.clip(delivery_days, 1, 10)
-    # THEN override in‑store to 0 (this overrides the clip)
-    delivery_days[channel == 'In-Store'] = 0
-    # ================================================
+    delivery_days = np.where(channel == 'In-Store', 0, np.clip(delivery_days, 1, 10))
 
     return_prob = np.where(channel == 'Online', 0.08,
                   np.where(channel == 'Mobile App', 0.07,
@@ -737,6 +723,20 @@ for day_idx in range(n):
 if current_buffer:
     pd.concat(current_buffer).to_csv(f_path, mode='a', header=False, index=False)
 
+print("\nVerifying generated CSV...")
+df_verify = pd.read_csv(f_path, nrows=5000)
+instore = df_verify[df_verify['channel'] == 'In-Store']
+if not instore.empty:
+    if (instore['deliverydays'] == 0).all():
+        print("✅ In-Store deliverydays = 0 – OK")
+    else:
+        print("❌ ERROR: Some In-Store rows have deliverydays != 0")
+        print(instore[['channel', 'deliverydays']].head(10))
+        raise SystemExit("Generator produced wrong deliverydays – fix the code!")
+else:
+    print("No In-Store rows in sample – check data")
+
 print(f"\n✅ All files created successfully. Total rows: {N_SALES:,}")
 print(f"Data generated from {START_DATE.date()} to {END_DATE.date()}")
-print("VERIFICATION: In-Store deliverydays = 0. No manual SQL fix needed.")
+print("In-Store deliverydays = 0. No promotion = NULL.")
+# Last updated: 2026-05-19

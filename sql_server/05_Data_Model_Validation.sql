@@ -1,114 +1,101 @@
 -- =====================================================================
--- MODEL VALIDATION (compatible with final schema – dimmanager not used)
+-- MODEL VALIDATION (compatible with final schema – no dimmanager)
 -- =====================================================================
 
-WITH model_checks AS (
-    -- 1. Star schema: factsales must have foreign keys to all 5 core dimensions
-    SELECT
-        'star_schema' AS check_category,
-        'factsales has foreign keys to all 5 dimensions (date, product, customer, store, promotion)' AS check_description,
-        CASE WHEN COUNT(*) = 5 THEN 'OK' ELSE 'ISSUE' END AS check_result,
-        COUNT(*) AS details
-    FROM sys.foreign_keys
-    WHERE parent_object_id = OBJECT_ID('dbo.factsales')
-      AND referenced_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('dbo.dimproduct'),
-                                   OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
-                                   OBJECT_ID('dbo.dimpromotion'))
-    UNION ALL
-
-    -- 2. Fact purity: factsales contains only expected columns (no extra, no missing)
-    SELECT
-        'fact_purity',
-        'factsales contains only allowed columns (no extra columns)' AS check_description,
-        CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'ISSUE' END,
-        COUNT(*)
-    FROM sys.columns
-    WHERE object_id = OBJECT_ID('dbo.factsales')
-      AND name NOT IN ('salesid','datekey','productid','customerid','storeid','promoid',
-                       'qty','unitprice','tax_rate','net','payment','channel','shipcost','isreturn',
-                       'shipweight','discountapplied','returnreason','deliverydays',
-                       'grossvalue','discountamount','taxamount')
-    UNION ALL
-
-    -- 3. All five core dimension tables have a primary key
-    SELECT
-        'dimension_keys',
-        'all five dimension tables (dimdate, dimproduct, dimcustomer, dimstore, dimpromotion) have a primary key' AS check_description,
-        CASE WHEN COUNT(DISTINCT parent_object_id) = 5 THEN 'OK' ELSE 'ISSUE' END,
-        COUNT(DISTINCT parent_object_id)
-    FROM sys.key_constraints
-    WHERE type = 'PK' AND parent_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('dbo.dimproduct'),
-                                               OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
-                                               OBJECT_ID('dbo.dimpromotion'))
-    UNION ALL
-
-    -- 4. Performance: factsales should have a clustered columnstore index for large volumes
-    SELECT
-        'performance',
-        'factsales has a clustered columnstore index (recommended for large fact tables)' AS check_description,
-        CASE WHEN COUNT(*) = 1 THEN 'OK' ELSE 'ISSUE' END,
-        COUNT(*)
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID('dbo.factsales') AND type_desc = 'CLUSTERED COLUMNSTORE'
-    UNION ALL
-
-    -- 5. Referential integrity: no orphan rows (NULL promoid allowed – means no promotion)
-    SELECT
-        'referential_integrity',
-        'no orphan rows in factsales (all foreign keys have matching dimension records, NULL promoid is allowed)' AS check_description,
-        CASE WHEN orphan_count = 0 THEN 'OK' ELSE 'ISSUE' END,
-        orphan_count
-    FROM (
-        SELECT COUNT(*) AS orphan_count
-        FROM dbo.factsales f
-        LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey
-        LEFT JOIN dbo.dimproduct p ON f.productid = p.productid
-        LEFT JOIN dbo.dimcustomer c ON f.customerid = c.customerid
-        LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid
-        LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
-        WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
-           OR s.storeid IS NULL
-           OR (f.promoid IS NOT NULL AND pr.promoid IS NULL)
-    ) AS orphan_check
-)
-SELECT check_category, check_description, check_result, details
-FROM model_checks
-ORDER BY CASE WHEN check_result = 'ISSUE' THEN 0 ELSE 1 END, check_category;
+USE retailanalytics;
 GO
 
+SET NOCOUNT ON;
+
+PRINT '================================================================================';
+PRINT 'MODEL VALIDATION – retailanalytics';
+PRINT '================================================================================';
+PRINT '';
+
+DROP TABLE IF EXISTS #model_checks;
+CREATE TABLE #model_checks (
+    check_category NVARCHAR(50),
+    check_description NVARCHAR(200),
+    check_result NVARCHAR(20),
+    details INT
+);
+
+-- 1. Star schema: factsales must have foreign keys to all 5 core dimensions
+INSERT INTO #model_checks
+SELECT 'star_schema',
+       'factsales has foreign keys to all 5 dimensions (date, product, customer, store, promotion)',
+       CASE WHEN COUNT(*) = 5 THEN 'OK' ELSE 'ISSUE' END,
+       COUNT(*)
+FROM sys.foreign_keys
+WHERE parent_object_id = OBJECT_ID('dbo.factsales')
+  AND referenced_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('dbo.dimproduct'),
+                               OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
+                               OBJECT_ID('dbo.dimpromotion'));
+
+-- 2. Fact purity: factsales contains only expected columns
+INSERT INTO #model_checks
+SELECT 'fact_purity',
+       'factsales contains only allowed columns (no extra columns)',
+       CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'ISSUE' END,
+       COUNT(*)
+FROM sys.columns
+WHERE object_id = OBJECT_ID('dbo.factsales')
+  AND name NOT IN ('salesid','datekey','productid','customerid','storeid','promoid',
+                   'qty','unitprice','tax_rate','net','payment','channel','shipcost','isreturn',
+                   'shipweight','discountapplied','returnreason','deliverydays',
+                   'grossvalue','discountamount','taxamount');
+
+-- 3. All five core dimension tables have a primary key
+INSERT INTO #model_checks
+SELECT 'dimension_keys',
+       'all five dimension tables (dimdate, dimproduct, dimcustomer, dimstore, dimpromotion) have a primary key',
+       CASE WHEN COUNT(DISTINCT parent_object_id) = 5 THEN 'OK' ELSE 'ISSUE' END,
+       COUNT(DISTINCT parent_object_id)
+FROM sys.key_constraints
+WHERE type = 'PK' AND parent_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('dbo.dimproduct'),
+                                           OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
+                                           OBJECT_ID('dbo.dimpromotion'));
+
+-- 4. Performance: factsales should have a clustered columnstore index
+INSERT INTO #model_checks
+SELECT 'performance',
+       'factsales has a clustered columnstore index (recommended for large fact tables)',
+       CASE WHEN COUNT(*) = 1 THEN 'OK' ELSE 'ISSUE' END,
+       COUNT(*)
+FROM sys.indexes
+WHERE object_id = OBJECT_ID('dbo.factsales') AND type_desc = 'CLUSTERED COLUMNSTORE';
+
+-- 5. Referential integrity: no orphan rows (NULL promoid allowed)
+INSERT INTO #model_checks
+SELECT 'referential_integrity',
+       'no orphan rows in factsales (all foreign keys have matching dimension records, NULL promoid is allowed)',
+       CASE WHEN orphan_count = 0 THEN 'OK' ELSE 'ISSUE' END,
+       orphan_count
+FROM (
+    SELECT COUNT(*) AS orphan_count
+    FROM dbo.factsales f
+    LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey
+    LEFT JOIN dbo.dimproduct p ON f.productid = p.productid
+    LEFT JOIN dbo.dimcustomer c ON f.customerid = c.customerid
+    LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid
+    LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
+    WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
+       OR s.storeid IS NULL
+       OR (f.promoid IS NOT NULL AND pr.promoid IS NULL)
+) AS orphan_check;
+
+-- Final report
+SELECT check_category, check_description, check_result, details
+FROM #model_checks
+ORDER BY CASE WHEN check_result = 'ISSUE' THEN 0 ELSE 1 END, check_category;
+
+DROP TABLE #model_checks;
+
+PRINT '================================================================================';
+PRINT 'MODEL VALIDATION COMPLETED.';
+PRINT '================================================================================';
+
 -- =====================================================================
--- Final explanatory comment (updated)
+-- File generated on: 2025-05-19
 -- =====================================================================
-PRINT '
-================================================================================
-MODEL VALIDATION COMPLETED - WHAT THIS SCRIPT DOES AND WHY IT IS USEFUL
-
-This script validates the overall database model structure after loading data
-from CSV files generated by the Python generator (final version). It checks for:
-
-1. Star schema integrity: Are all foreign keys from factsales to the five dimensions present?
-2. Fact table purity: Does factsales contain only the expected columns? (Updated: uses tax_rate)
-3. Dimension keys: Do all five dimension tables have a primary key?
-4. Performance: Is there a clustered columnstore index on factsales (critical for large data)?
-5. Referential integrity: Are there any orphan rows? (NULL promoid is allowed – it means no promotion)
-
-Changes from original script:
-- Replaced column name taxrate_pct with tax_rate to match actual schema.
-- Fixed orphan check for promoid: rows with NULL promoid are not considered orphans.
-
-How it works:
-- The script queries system catalog views and performs a single data check for orphans.
-- Results are presented as a table with check category, description, result (OK/ISSUE), and details.
-
-Why it is useful in this project:
-- Confirms the star schema design, essential for Power BI reporting.
-- Ensures factsales has correct columns, preventing reporting errors.
-- Guarantees the clustered columnstore index exists for performance on 5 million rows.
-- Validates referential integrity, avoiding missing data in analytics.
-- Complements the data quality script (which checks values) by validating structure and relationships.
-
-All checks are adapted to the final schema (no dimmanager, no denormalized columns).
-It is a best practice to run this after every database load.
-================================================================================
-';
 GO

@@ -1,5 +1,4 @@
 promoid,promoname,discount_pct,discount_fixed,type,isactive,minspend,channel,budget,startdate,enddate,targetaudience,maxdiscountcap,isstackable,redemption_rate,coderequired,promoupliftfactor
-0,No Promotion,0.0,0.0,None,1,0,All,0.0,2023-01-01,2026-05-18,All,0.0,0,0.0,0,1.0
 1,Shipping included,0.0,0.0,Free Shipping,0,0,Online,0.0,2024-02-01,2024-11-29,HighSpend,58.46,0,0.287,1,1.02
 2,Clearance 14% OFF,0.144,0.0,Percentage,0,25,SMS,1658.0,2023-03-05,2024-11-26,All,98.39,0,0.271,0,1.376
 3,Flash Sale 41% OFF,0.418,0.0,Percentage,0,10,Email,4411.0,2023-08-02,2024-09-23,All,96.07,0,0.317,0,1.301

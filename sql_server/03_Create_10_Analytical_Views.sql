@@ -1,6 +1,8 @@
--- ========================================================================
+-- =====================================================================
+-- 04_analytical_views.sql
 -- ANALYTICAL VIEWS (compatible with final schema – no dimmanager)
--- ========================================================================
+-- Last updated: 2026-05-19
+-- =====================================================================
 
 USE retailanalytics;
 GO
@@ -18,9 +20,6 @@ IF OBJECT_ID('dbo.[009_vw_delivery_speed_impact]', 'V') IS NOT NULL DROP VIEW db
 IF OBJECT_ID('dbo.[010_vw_warranty_eco_impact]', 'V') IS NOT NULL DROP VIEW dbo.[010_vw_warranty_eco_impact];
 GO
 
--- ========================================================================
--- VIEW 001: Product and Category Margin Analysis
--- ========================================================================
 CREATE VIEW dbo.[001_vw_product_category_margin]
 AS
 WITH revenue_cost AS (
@@ -48,9 +47,6 @@ FROM revenue_cost
 WHERE total_revenue > 0;
 GO
 
--- ========================================================================
--- VIEW 002: Promotion Performance (Uplift & Margin)
--- ========================================================================
 CREATE VIEW dbo.[002_vw_promo_performance]
 AS
 WITH promo_performance AS (
@@ -76,7 +72,7 @@ baseline AS (
         AVG(f.grossvalue - f.discountamount) AS avg_revenue_baseline,
         AVG(f.qty) AS avg_qty_baseline
     FROM dbo.factsales f
-    WHERE f.promoid = 0 AND f.isreturn = 0
+    WHERE f.promoid IS NULL AND f.isreturn = 0
 )
 SELECT
     pp.*,
@@ -89,9 +85,6 @@ FROM promo_performance pp
 CROSS JOIN baseline;
 GO
 
--- ========================================================================
--- VIEW 003: Customer RFM Segmentation & LTV
--- ========================================================================
 CREATE VIEW dbo.[003_vw_customer_rfm_segments]
 AS
 WITH customer_rfm AS (
@@ -139,9 +132,6 @@ FROM segments
 GROUP BY segment;
 GO
 
--- ========================================================================
--- VIEW 004: Returns Analysis by Channel and Reason
--- ========================================================================
 CREATE VIEW dbo.[004_vw_returns_analysis]
 AS
 SELECT
@@ -156,9 +146,6 @@ WHERE f.isreturn = 1
 GROUP BY f.channel, f.returnreason;
 GO
 
--- ========================================================================
--- VIEW 005: Sales Channel Performance
--- ========================================================================
 CREATE VIEW dbo.[005_vw_channel_performance]
 AS
 SELECT
@@ -175,9 +162,6 @@ INNER JOIN dbo.dimproduct p ON f.productid = p.productid
 GROUP BY f.channel;
 GO
 
--- ========================================================================
--- VIEW 006: Seasonal Category Revenue
--- ========================================================================
 CREATE VIEW dbo.[006_vw_seasonal_category_revenue]
 AS
 SELECT
@@ -194,9 +178,6 @@ WHERE f.isreturn = 0
 GROUP BY d.monthnumber, d.monthname, p.category;
 GO
 
--- ========================================================================
--- VIEW 007: Store Performance by Region and Type
--- ========================================================================
 CREATE VIEW dbo.[007_vw_store_performance_by_region_type]
 AS
 SELECT
@@ -215,9 +196,6 @@ WHERE f.isreturn = 0
 GROUP BY s.region, s.type;
 GO
 
--- ========================================================================
--- VIEW 008: Pareto (80/20) Margin Analysis
--- ========================================================================
 CREATE VIEW dbo.[008_vw_pareto_margin_analysis]
 AS
 WITH product_margin AS (
@@ -246,9 +224,6 @@ FROM running
 WHERE running_pct <= 0.8;
 GO
 
--- ========================================================================
--- VIEW 009: Delivery Speed Impact on Returns
--- ========================================================================
 CREATE VIEW dbo.[009_vw_delivery_speed_impact]
 AS
 WITH delivery_groups AS (
@@ -278,9 +253,6 @@ FROM delivery_groups
 GROUP BY channel, category, delivery_speed;
 GO
 
--- ========================================================================
--- VIEW 010: Warranty & Eco-friendly Impact
--- ========================================================================
 CREATE VIEW dbo.[010_vw_warranty_eco_impact]
 AS
 SELECT
@@ -295,9 +267,6 @@ INNER JOIN dbo.dimproduct p ON f.productid = p.productid
 GROUP BY p.haswarranty, p.ecofriendly;
 GO
 
--- ========================================================================
--- Confirmation (lists all views and their row counts)
--- ========================================================================
 SELECT 'All analytical views created successfully (compatible with final schema).' AS status;
 SELECT '001_vw_product_category_margin' AS ViewName, COUNT(*) AS RecordCount FROM [001_vw_product_category_margin]
 UNION ALL SELECT '002_vw_promo_performance', COUNT(*) FROM [002_vw_promo_performance]
@@ -310,32 +279,4 @@ UNION ALL SELECT '008_vw_pareto_margin_analysis', COUNT(*) FROM [008_vw_pareto_m
 UNION ALL SELECT '009_vw_delivery_speed_impact', COUNT(*) FROM [009_vw_delivery_speed_impact]
 UNION ALL SELECT '010_vw_warranty_eco_impact', COUNT(*) FROM [010_vw_warranty_eco_impact];
 GO
-
--- ========================================================================
--- Final explanatory comment
--- ========================================================================
-PRINT '
-================================================================================
-ANALYTICAL VIEWS CREATED – BUSINESS VALUE
-
-This script creates 10 analytical views on top of the retailanalytics database
-(compatible with final schema – no dimmanager, no denormalized columns). Each view
-answers a specific business question and is ready to be used in Power BI.
-
-List of views:
-
-001_vw_product_category_margin – Product profitability, ranking within category.
-002_vw_promo_performance – Promo uplift and margin vs. baseline.
-003_vw_customer_rfm_segments – Customer segmentation (Champions, At Risk, etc.).
-004_vw_returns_analysis – Returns by channel and reason.
-005_vw_channel_performance – Channel comparison (basket, margin, return rate).
-006_vw_seasonal_category_revenue – Monthly revenue per category, seasonal peaks.
-007_vw_store_performance_by_region_type – Store revenue, margin, rating by region/type.
-008_vw_pareto_margin_analysis – Number of products contributing to first 80% margin.
-009_vw_delivery_speed_impact – Return rate by delivery speed (online/mobile).
-010_vw_warranty_eco_impact – Revenue and returns by warranty/eco certification.
-
-All views have been tested and are compatible with the final database schema.
-================================================================================
-';
-GO
+-- Last updated: 2026-05-19

@@ -1,6 +1,7 @@
 -- =====================================================================
+-- 03_data_quality_checks.sql
 -- DATA QUALITY & INTEGRITY SCRIPT – retailanalytics
--- Compatible with dynamic END_DATE (today) and corrected Python generator
+-- Last updated: 2026-05-19
 -- =====================================================================
 
 USE retailanalytics;
@@ -26,9 +27,7 @@ CREATE TABLE #dq_checks (
     status NVARCHAR(20)
 );
 
--- =====================================================================
--- 1. DIMDATE CHECKS (dynamic date range)
--- =====================================================================
+-- dimdate checks
 INSERT INTO #dq_checks
 SELECT 'dimdate', 'Null', 'datekey_null', 'datekey is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimdate WHERE datekey IS NULL
@@ -56,9 +55,7 @@ UNION ALL
 SELECT 'dimdate', 'Range', 'date_coverage_end', 'Maximum date in dimdate (should be today)', 0, CAST(GETDATE() AS NVARCHAR), CAST(MAX(fulldate) AS NVARCHAR), CASE WHEN MAX(fulldate) = CAST(GETDATE() AS DATE) THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimdate;
 
--- =====================================================================
--- 2. DIMCUSTOMER CHECKS
--- =====================================================================
+-- dimcustomer checks
 INSERT INTO #dq_checks
 SELECT 'dimcustomer', 'Null', 'customerid_null', 'customerid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimcustomer WHERE customerid IS NULL
@@ -86,9 +83,7 @@ UNION ALL
 SELECT 'dimcustomer', 'Consistency', 'bronze_high_income', 'Bronze with income > 100000', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimcustomer WHERE tier = 'Bronze' AND annualincome > 100000;
 
--- =====================================================================
--- 3. DIMPRODUCT CHECKS
--- =====================================================================
+-- dimproduct checks
 INSERT INTO #dq_checks
 SELECT 'dimproduct', 'Null', 'productid_null', 'productid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE productid IS NULL
@@ -116,9 +111,7 @@ UNION ALL
 SELECT 'dimproduct', 'Logical', 'discontinued_but_active', 'isdiscontinued=1 but isactive=1', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE isdiscontinued = 1 AND isactive = 1;
 
--- =====================================================================
--- 4. DIMSTORE CHECKS
--- =====================================================================
+-- dimstore checks
 INSERT INTO #dq_checks
 SELECT 'dimstore', 'Null', 'storeid_null', 'storeid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimstore WHERE storeid IS NULL
@@ -134,9 +127,7 @@ UNION ALL
 SELECT 'dimstore', 'Range', 'rating_out_of_bounds', 'storerating not in [2.0,5.0]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimstore WHERE storerating < 2.0 OR storerating > 5.0;
 
--- =====================================================================
--- 5. DIMPROMOTION CHECKS (BOGO test removed – it is valid)
--- =====================================================================
+-- dimpromotion checks (BOGO test removed – it is valid)
 INSERT INTO #dq_checks
 SELECT 'dimpromotion', 'Null', 'promoid_null', 'promoid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimpromotion WHERE promoid IS NULL
@@ -158,9 +149,7 @@ FROM dbo.dimpromotion WHERE redemption_rate < 0 OR redemption_rate > 1
 UNION ALL
 SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname', 'duplicate promotion name', (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) = 0 THEN 'PASS' ELSE 'FAIL' END;
 
--- =====================================================================
--- 6. FACTSALES CHECKS (including deliverydays fix)
--- =====================================================================
+-- factsales checks
 INSERT INTO #dq_checks
 SELECT 'factsales', 'Financial', 'net_calculation_error', 'net != grossvalue - discountamount + taxamount', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE ABS(net - (grossvalue - discountamount + taxamount)) > 0.01
@@ -227,9 +216,7 @@ UNION ALL
 SELECT 'factsales', 'Count', 'fact_row_count', 'Row count of factsales (should be ~5M)', COUNT(*), '5,000,000 ±10%', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) BETWEEN 4500000 AND 5500000 THEN 'PASS' ELSE 'WARN' END
 FROM dbo.factsales;
 
--- =====================================================================
--- FINAL REPORT
--- =====================================================================
+-- final report
 PRINT '================================================================================';
 PRINT 'DATA QUALITY CHECK RESULTS (only failures and warnings)';
 PRINT '================================================================================';
@@ -282,3 +269,4 @@ PRINT '=========================================================================
 
 DROP TABLE #dq_checks;
 GO
+-- Last updated: 2026-05-19
