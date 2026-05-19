@@ -1,6 +1,11 @@
 # Retail Analytics – Complete Documentation (Final)
 
-**Project Overview** – The database models a multi‑channel retail chain with 5 million sales transactions (2023‑01‑01 to today). All percentages are fractions. `promoid = 0` is dummy for no promotion (converted to NULL). Star schema with five dimensions and one fact table.
+**Project Overview** – The database models a multi‑channel retail chain (online, in‑store, mobile app, phone order) with **5 million sales transactions** generated from 2023‑01‑01 to the **current date** (dynamic). The data generator produces realistic trend evolution (soft landing, moderate growth, correction, final rally) with heteroscedastic noise. All percentages are stored as fractions (e.g., `0.15` = 15%).  
+- No dummy promotion is used – `promoid` in the fact table is `NULL` when there is no promotion (the promotion dimension contains only real promotions from 1 to 100).  
+- `deliverydays = 0` for all `In-Store` transactions (enforced in both generator and loader).  
+- The schema follows a star design with five dimensions and one fact table.
+
+## Table Definitions
 
 **dim_date**
 | Column | Type | Description |
@@ -12,7 +17,7 @@
 | quartername | NCHAR(2) | Q1‑Q4 |
 | monthnumber | TINYINT | 1‑12 |
 | monthname | NVARCHAR(20) | January, … |
-| weekdaynumber | TINYINT | 1=Monday..7=Sunday |
+| weekdaynumber | TINYINT | 1=Monday .. 7=Sunday |
 | weekdayname | NVARCHAR(20) | Monday, … |
 | isweekend | BIT | 1 if weekend |
 | yearmonth | NCHAR(7) | YYYY‑MM |
@@ -102,7 +107,7 @@
 **dim_promotion**
 | Column | Type | Description |
 |--------|------|-------------|
-| promoid | INT | PK, 0 = no promotion (converted to NULL in database) |
+| promoid | INT | PK (only real promotions from 1 to 100; no dummy row) |
 | promoname | NVARCHAR(150) | unique name |
 | discount_pct | DECIMAL(5,3) | percentage discount (fraction) |
 | discount_fixed | DECIMAL(10,2) | fixed USD discount |
@@ -373,6 +378,8 @@ UNION ALL
 SELECT 'fact_sales', COUNT(*)
 FROM dbo.factsales f LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE f.promoid IS NOT NULL AND p.promoid IS NULL;
 
+-- DAX measures (all in one block)
+
 Total Revenue = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[net])
 Total COGS = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[qty] * RELATED(dimproduct[unitcost]))
 Gross Profit = [Total Revenue] - [Total COGS]
@@ -411,6 +418,8 @@ City Avg Basket = AVERAGEX(VALUES(dimstore[city]), CALCULATE([Average Basket Val
 Promo Uplift = VAR Promo = CALCULATE([Total Revenue], factsales[promoid] > 0) VAR NonPromo = CALCULATE([Total Revenue], factsales[promoid] = 0) RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
 Avg Discount % = AVERAGEX(FILTER(factsales, factsales[discountapplied] = 1), factsales[discountamount] / factsales[grossvalue])
 Price-Qty Correlation = VAR Products = VALUES(dimproduct[productid]) VAR Covar = SUMX(Products, (AVERAGEX(RELATEDTABLE(factsales), factsales[unitprice]) - AVERAGE(factsales[unitprice])) * (AVERAGEX(RELATEDTABLE(factsales), factsales[qty]) - AVERAGE(factsales[qty]))) VAR StdPrice = STDEVX.P(Products, AVERAGEX(RELATEDTABLE(factsales), factsales[unitprice])) VAR StdQty = STDEVX.P(Products, AVERAGEX(RELATEDTABLE(factsales), factsales[qty])) RETURN DIVIDE(Covar, StdPrice * StdQty, 0)
+
+-- Python verification script (complete)
 
 import pandas as pd
 import numpy as np
@@ -546,25 +555,3 @@ monthly_summary.to_csv(os.path.join(OUTPUT_DIR, 'monthly_summary.csv'), index=Fa
 rfm.to_csv(os.path.join(OUTPUT_DIR, 'rfm_scores.csv'), index=False)
 top_pairs[['name_A', 'name_B', 'count']].head(20).to_csv(os.path.join(OUTPUT_DIR, 'top_product_pairs.csv'), index=False)
 print("Analysis complete. Exported: monthly_summary.csv, rfm_scores.csv, top_product_pairs.csv")
-
-**End of Documentation – Project Summary**
-
-We have built a complete retail analytics pipeline based on the Medallion Architecture (Bronze → Silver → Gold). The work includes:
-
-- **Python data generator** (`generator.py`) – produces 5 million realistic sales transactions with a soft‑landing trend, correct `deliverydays` for in‑store sales, discontinued products correctly flagged, and `NULL` for no promotion. The generator deletes old CSV files before writing to ensure fresh data.
-
-- **SQL Server loader** (`01_create_database.sql`) – creates the `retailanalytics` database, loads all dimensions and the fact table, enforces foreign keys, adds a clustered columnstore index, and forces `deliverydays = 0` for `In-Store` transactions even if the CSV contains wrong values.
-
-- **Model validation** (`02_model_validation.sql`) – confirms the star schema, foreign keys, columnstore index, and referential integrity.
-
-- **Data quality checks** (`03_data_quality_checks.sql`) – runs over 30 tests (nulls, ranges, financial equations, return logic, etc.) – all pass.
-
-- **Analytical views** (`04_analytical_views.sql`) – creates 10 gold views answering key business questions (product margin, promotion uplift, customer RFM, returns, channel performance, seasonality, store performance, Pareto, delivery impact, warranty/eco impact).
-
-- **DAX measures** – provided for Power BI (basic and extended).
-
-- **Python verification script** – loads all CSVs, performs statistical checks, and exports visualisations.
-
-All tests passed, and the data is clean and ready for analytics. The project demonstrates a production‑ready retail data pipeline.
-
-**Generated on 2025-05-19.**
