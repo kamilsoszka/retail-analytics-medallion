@@ -113,3 +113,5 @@ MIT © 2025 Kamil Soszka
 **Last update: 2025-05-19**
 
 <img width="1302" height="727" alt="retailanalytics_chart" src="https://github.com/user-attachments/assets/a77e8092-d757-477d-86ef-f8cd00a87b2f" />
+<img width="1300" height="731" alt="managerportfoliovalues" src="https://github.com/user-attachments/assets/3307c04e-0264-4ab5-9a03-eed875083e31" />
+
