@@ -118,9 +118,4 @@ MIT © 2025 Kamil Soszka
 Last update: 2026-05-21 (final generator & loader – hour, promoid=0, returnreason, unique store names)
 
 <img width="1302" height="732" alt="retailanalytics_chart" src="https://github.com/user-attachments/assets/38f59f67-b6ea-43bf-92c6-c908b61b94cf" />
-<<<<<<< HEAD
 <img width="1301" height="731" alt="managerportfolio_table" src="https://github.com/user-attachments/assets/1e8542c2-ed11-4096-b9bf-5b0d8062947e" />
-=======
-<img width="1301" height="731" alt="managerportfolio_table" src="https://github.com/user-attachments/assets/1e8542c2-ed11-4096-b9bf-5b0d8062947e" />
-
->>>>>>> 2f050765b47afce09fba20ad6c71185d5f2d8df1
