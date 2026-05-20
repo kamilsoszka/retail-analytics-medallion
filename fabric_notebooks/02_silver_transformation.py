@@ -1,9 +1,10 @@
 # Notebook: 02_silver_transformation
-# Clean, deduplicate, write to 02_silver_db, and ensure dummy promotion (promoid=0) using SQL INSERT
+# Clean, deduplicate, write to 02_silver_db, and ensure dummy promotion (promoid=0)
+# Compatible with final generator: hour column, returnreason='No return', promoid=0 dummy
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, current_timestamp
-from pyspark.sql.types import DecimalType
+from pyspark.sql.functions import col, when, current_timestamp, lit
+from pyspark.sql.types import DecimalType, ByteType
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -19,6 +20,9 @@ for t in existing:
 
 bronze_tables = spark.sql(f"SHOW TABLES IN {bronze_schema}").collect()
 
+# Define columns that should be cast to Decimal(18,2) (or appropriate precision)
+decimal_cols = ["unitprice", "unitcost", "grossvalue", "discountamount", "tax_rate", "margin_pct", "discount_pct", "promoupliftfactor", "redemption_rate"]
+
 for tbl in bronze_tables:
     bronze_name = tbl.tableName
     if "manager" in bronze_name.lower():
@@ -30,23 +34,30 @@ for tbl in bronze_tables:
 
     df = spark.table(f"{bronze_schema}.{bronze_name}")
 
-    # Cast numeric columns
-    for c in ["unitprice", "unitcost", "grossvalue", "discountamount", "taxrate_pct", "margin_pct"]:
+    # Cast numeric columns (only if they exist)
+    for c in decimal_cols:
         if c in df.columns:
-            df = df.withColumn(c, col(c).cast(DecimalType(18,2)))
+            if c in ["margin_pct", "discount_pct", "redemption_rate", "promoupliftfactor"]:
+                df = df.withColumn(c, col(c).cast(DecimalType(5,4)))
+            else:
+                df = df.withColumn(c, col(c).cast(DecimalType(18,2)))
 
-    # Replace empty strings with NULL
+    # Cast hour column to TINYINT (ByteType) if present
+    if "hour" in df.columns:
+        df = df.withColumn("hour", col("hour").cast(ByteType()))
+
+    # Replace empty strings with NULL for string columns (but keep 'No return' as is)
     for c in df.columns:
         if df.schema[c].dataType.typeName() == "string":
             df = df.withColumn(c, when(col(c) == "", None).otherwise(col(c)))
 
-    # Deduplicate
+    # Deduplicate whole rows
     df = df.dropDuplicates()
 
     # Add audit timestamp
     df = df.withColumn("_silver_processed_ts", current_timestamp())
 
-    # Repartition fact_sales by datekey
+    # Repartition fact_sales by datekey (improves performance)
     if "factsales" in entity and "datekey" in df.columns:
         df = df.repartition(col("datekey"))
 
@@ -61,12 +72,12 @@ if not dummy_exists:
     print("Inserting dummy promotion using SQL INSERT...")
     spark.sql(f"""
         INSERT INTO {silver_schema}.silver_dimpromotion
-        (promoid, promoname, discount_pct, discount_fixed, type, isactive, minspend, channel, budget, startdate, enddate, targetaudience, maxdiscountcap, isstackable, redemption_rate_target_pct, coderequired, promoupliftfactor)
+        (promoid, promoname, discount_pct, discount_fixed, type, isactive, minspend, channel, budget, startdate, enddate, targetaudience, maxdiscountcap, isstackable, redemption_rate, coderequired, promoupliftfactor)
         VALUES (
             0, 'No Promotion',
             CAST(0.000 AS DECIMAL(5,3)),
             CAST(0.00 AS DECIMAL(10,2)),
-            'None', 1, 0, 'None',
+            'None', 1, 0, 'All',
             CAST(0 AS DECIMAL(18,2)),
             '2000-01-01', '2099-12-31', 'All',
             CAST(0 AS DECIMAL(18,2)),

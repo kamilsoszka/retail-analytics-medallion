@@ -1,5 +1,6 @@
 -- Notebook: 03_gold_analytics_tables
 -- Run this cell as %%sql in the same notebook
+-- Compatible with final schema: promoid=0 for no promotion, returnreason='No return' for non-returns
 
 CREATE SCHEMA IF NOT EXISTS `03_gold_db`;
 
@@ -21,7 +22,7 @@ SELECT category, productid, name, total_revenue, total_cost,
        RANK() OVER (PARTITION BY category ORDER BY (total_revenue - total_cost) / NULLIF(total_revenue, 0) DESC) AS rank_in_cat
 FROM revenue_cost WHERE total_revenue > 0;
 
--- 002 Promotion performance
+-- 002 Promotion performance (uses promoid=0 for baseline)
 CREATE OR REPLACE TABLE `03_gold_db`.vw_002_promo_performance
 USING delta AS
 WITH promo_performance AS (
@@ -84,10 +85,10 @@ SELECT segment, COUNT(*) AS customers, AVG(monetary) AS avg_ltv, SUM(monetary) A
        ROUND(AVG(margin_total / NULLIF(monetary, 0)), 4) AS avg_margin_pct
 FROM segments GROUP BY segment;
 
--- 004 Returns analysis
+-- 004 Returns analysis (returnreason never NULL, but COALESCE harmless)
 CREATE OR REPLACE TABLE `03_gold_db`.vw_004_returns_analysis
 USING delta AS
-SELECT f.channel, COALESCE(f.returnreason, 'Unknown') AS returnreason,
+SELECT f.channel, f.returnreason,
        COUNT(*) AS return_count,
        ROUND(CAST(COUNT(*) AS DOUBLE) / SUM(COUNT(*)) OVER (PARTITION BY f.channel), 4) AS pct_of_channel_returns,
        SUM(f.shipcost) AS total_shipping_cost_returns,

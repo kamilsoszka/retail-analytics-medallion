@@ -1,35 +1,32 @@
-SELECT 'bronze_dimdate' AS table_name, COUNT(*) FROM `01_bronze_db`.`bronze_dimdate`
-UNION ALL SELECT 'bronze_dimcustomer', COUNT(*) FROM `01_bronze_db`.`bronze_dimcustomer`
-UNION ALL SELECT 'bronze_dimproduct', COUNT(*) FROM `01_bronze_db`.`bronze_dimproduct`
-UNION ALL SELECT 'bronze_dimstore', COUNT(*) FROM `01_bronze_db`.`bronze_dimstore`
-UNION ALL SELECT 'bronze_dimpromotion', COUNT(*) FROM `01_bronze_db`.`bronze_dimpromotion`
-UNION ALL SELECT 'bronze_factsales', COUNT(*) FROM `01_bronze_db`.`bronze_factsales`;
+-- ============================================================
+-- FABRIC (SPARK SQL) – SILVER/GOLD LAYER VALIDATION
+-- Compatible with final schema: promoid = 0, hour, returnreason='No return'
+-- Last updated: 2026-05-21
+-- ============================================================
 
-SELECT 'silver_dimdate' AS table_name, COUNT(*) FROM `02_silver_db`.`silver_dimdate`
-UNION ALL SELECT 'silver_dimcustomer', COUNT(*) FROM `02_silver_db`.`silver_dimcustomer`
-UNION ALL SELECT 'silver_dimproduct', COUNT(*) FROM `02_silver_db`.`silver_dimproduct`
-UNION ALL SELECT 'silver_dimstore', COUNT(*) FROM `02_silver_db`.`silver_dimstore`
-UNION ALL SELECT 'silver_dimpromotion', COUNT(*) FROM `02_silver_db`.`silver_dimpromotion`
-UNION ALL SELECT 'silver_factsales', COUNT(*) FROM `02_silver_db`.`silver_factsales`;
+-- Use silver tables (after transformation)
+-- If you want to validate bronze, replace `02_silver_db` with `01_bronze_db`
+-- and table names from silver_* to bronze_*
 
-SELECT 'vw_001_product_category_margin' AS view_name, COUNT(*) FROM `03_gold_db`.`vw_001_product_category_margin`
-UNION ALL SELECT 'vw_002_promo_performance', COUNT(*) FROM `03_gold_db`.`vw_002_promo_performance`
-UNION ALL SELECT 'vw_003_customer_rfm_segments', COUNT(*) FROM `03_gold_db`.`vw_003_customer_rfm_segments`
-UNION ALL SELECT 'vw_004_returns_analysis', COUNT(*) FROM `03_gold_db`.`vw_004_returns_analysis`
-UNION ALL SELECT 'vw_005_channel_performance', COUNT(*) FROM `03_gold_db`.`vw_005_channel_performance`
-UNION ALL SELECT 'vw_006_seasonal_category_revenue', COUNT(*) FROM `03_gold_db`.`vw_006_seasonal_category_revenue`
-UNION ALL SELECT 'vw_007_store_performance_by_region_type', COUNT(*) FROM `03_gold_db`.`vw_007_store_performance_by_region_type`
-UNION ALL SELECT 'vw_008_pareto_margin_analysis', COUNT(*) FROM `03_gold_db`.`vw_008_pareto_margin_analysis`
-UNION ALL SELECT 'vw_009_delivery_speed_impact', COUNT(*) FROM `03_gold_db`.`vw_009_delivery_speed_impact`
-UNION ALL SELECT 'vw_010_warranty_eco_impact', COUNT(*) FROM `03_gold_db`.`vw_010_warranty_eco_impact`;
+-- 1. Row counts
+SELECT 'dimdate' AS table_name, COUNT(*) AS row_count FROM `02_silver_db`.`silver_dimdate`
+UNION ALL SELECT 'dimcustomer', COUNT(*) FROM `02_silver_db`.`silver_dimcustomer`
+UNION ALL SELECT 'dimproduct', COUNT(*) FROM `02_silver_db`.`silver_dimproduct`
+UNION ALL SELECT 'dimstore', COUNT(*) FROM `02_silver_db`.`silver_dimstore`
+UNION ALL SELECT 'dimpromotion', COUNT(*) FROM `02_silver_db`.`silver_dimpromotion`
+UNION ALL SELECT 'factsales', COUNT(*) FROM `02_silver_db`.`silver_factsales`
+ORDER BY table_name;
 
-SELECT 'bronze_dimdate', COUNT(*) - COUNT(DISTINCT datekey) FROM `01_bronze_db`.`bronze_dimdate`
-UNION ALL SELECT 'bronze_dimcustomer', COUNT(*) - COUNT(DISTINCT customerid) FROM `01_bronze_db`.`bronze_dimcustomer`
-UNION ALL SELECT 'bronze_dimproduct', COUNT(*) - COUNT(DISTINCT productid) FROM `01_bronze_db`.`bronze_dimproduct`
-UNION ALL SELECT 'bronze_dimstore', COUNT(*) - COUNT(DISTINCT storeid) FROM `01_bronze_db`.`bronze_dimstore`
-UNION ALL SELECT 'bronze_dimpromotion', COUNT(*) - COUNT(DISTINCT promoid) FROM `01_bronze_db`.`bronze_dimpromotion`
-UNION ALL SELECT 'bronze_factsales', COUNT(*) - COUNT(DISTINCT salesid) FROM `01_bronze_db`.`bronze_factsales`;
+-- 2. PK uniqueness (duplicate counts)
+SELECT 'dimdate' AS table_name, COUNT(*) - COUNT(DISTINCT datekey) AS duplicates FROM `02_silver_db`.`silver_dimdate`
+UNION ALL SELECT 'dimcustomer', COUNT(*) - COUNT(DISTINCT customerid) FROM `02_silver_db`.`silver_dimcustomer`
+UNION ALL SELECT 'dimproduct', COUNT(*) - COUNT(DISTINCT productid) FROM `02_silver_db`.`silver_dimproduct`
+UNION ALL SELECT 'dimstore', COUNT(*) - COUNT(DISTINCT storeid) FROM `02_silver_db`.`silver_dimstore`
+UNION ALL SELECT 'dimpromotion', COUNT(*) - COUNT(DISTINCT promoid) FROM `02_silver_db`.`silver_dimpromotion`
+UNION ALL SELECT 'factsales', COUNT(*) - COUNT(DISTINCT salesid) FROM `02_silver_db`.`silver_factsales`
+ORDER BY table_name;
 
+-- 3. Financial summary (non‑return transactions)
 SELECT 
     COUNT(*) AS transactions,
     SUM(qty) AS total_quantity,
@@ -37,24 +34,59 @@ SELECT
     SUM(net) AS net_revenue_including_tax,
     SUM(taxamount) AS total_tax,
     SUM(discountamount) AS total_discount
-FROM `01_bronze_db`.`bronze_factsales`
+FROM `02_silver_db`.`silver_factsales`
 WHERE isreturn = 0;
 
-SELECT salesid, datekey, productid, customerid, storeid, promoid, qty, unitprice, net, grossvalue, discountamount, taxamount, isreturn
-FROM `01_bronze_db`.`bronze_factsales`
+-- 4. Sample of 10 rows (including hour and returnreason)
+SELECT salesid, datekey, productid, customerid, storeid, promoid, qty, unitprice, net, grossvalue, discountamount, taxamount, isreturn, hour, returnreason
+FROM `02_silver_db`.`silver_factsales`
 ORDER BY salesid
 LIMIT 10;
 
-SELECT 'missing datekey', COUNT(*) FROM `02_silver_db`.`silver_factsales` f LEFT JOIN `02_silver_db`.`silver_dimdate` d ON f.datekey = d.datekey WHERE d.datekey IS NULL
-UNION ALL SELECT 'missing productid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f LEFT JOIN `02_silver_db`.`silver_dimproduct` p ON f.productid = p.productid WHERE p.productid IS NULL
-UNION ALL SELECT 'missing customerid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f LEFT JOIN `02_silver_db`.`silver_dimcustomer` c ON f.customerid = c.customerid WHERE c.customerid IS NULL
-UNION ALL SELECT 'missing storeid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f LEFT JOIN `02_silver_db`.`silver_dimstore` s ON f.storeid = s.storeid WHERE s.storeid IS NULL
-UNION ALL SELECT 'missing promoid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f LEFT JOIN `02_silver_db`.`silver_dimpromotion` p ON f.promoid = p.promoid WHERE p.promoid IS NULL;
+-- 5. Orphan check (promoid = 0 is allowed as dummy "No Promotion")
+SELECT 'missing datekey' AS constraint_name, COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
+LEFT JOIN `02_silver_db`.`silver_dimdate` d ON f.datekey = d.datekey WHERE d.datekey IS NULL
+UNION ALL
+SELECT 'missing productid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
+LEFT JOIN `02_silver_db`.`silver_dimproduct` p ON f.productid = p.productid WHERE p.productid IS NULL
+UNION ALL
+SELECT 'missing customerid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
+LEFT JOIN `02_silver_db`.`silver_dimcustomer` c ON f.customerid = c.customerid WHERE c.customerid IS NULL
+UNION ALL
+SELECT 'missing storeid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
+LEFT JOIN `02_silver_db`.`silver_dimstore` s ON f.storeid = s.storeid WHERE s.storeid IS NULL
+UNION ALL
+SELECT 'missing promoid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
+LEFT JOIN `02_silver_db`.`silver_dimpromotion` p ON f.promoid = p.promoid WHERE p.promoid IS NULL   -- promoid always has a value (0 or valid)
+ORDER BY constraint_name;
 
-SELECT 'margin_pct', COUNT(*) FROM `01_bronze_db`.`bronze_dimproduct` WHERE margin_pct < 0 OR margin_pct > 1
-UNION ALL SELECT 'taxrate_pct', COUNT(*) FROM `01_bronze_db`.`bronze_dimproduct` WHERE taxrate_pct < 0 OR taxrate_pct > 1
-UNION ALL SELECT 'discount_pct', COUNT(*) FROM `01_bronze_db`.`bronze_dimpromotion` WHERE discount_pct < 0 OR discount_pct > 1;
+-- 6. Percent range checks (margin_pct, tax_rate, discount_pct)
+SELECT 'margin_pct' AS column_name, COUNT(*) AS out_of_range FROM `02_silver_db`.`silver_dimproduct` WHERE margin_pct < 0 OR margin_pct > 1
+UNION ALL
+SELECT 'tax_rate', COUNT(*) FROM `02_silver_db`.`silver_dimproduct` WHERE tax_rate < 0 OR tax_rate > 1
+UNION ALL
+SELECT 'discount_pct', COUNT(*) FROM `02_silver_db`.`silver_dimpromotion` WHERE discount_pct < 0 OR discount_pct > 1
+ORDER BY column_name;
 
+-- 7. Hour column validation (must be 0-23 and not null)
+SELECT 'hour_null' AS check_name, COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE hour IS NULL
+UNION ALL
+SELECT 'hour_out_of_range', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE hour < 0 OR hour > 23;
+
+-- 8. Returnreason validation
+SELECT 'returnreason_null' AS check_name, COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE returnreason IS NULL
+UNION ALL
+SELECT 'returnreason_missing_for_nonreturn', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE isreturn = 0 AND returnreason != 'No return'
+UNION ALL
+SELECT 'returnreason_missing_for_return', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE isreturn = 1 AND returnreason = 'No return';
+
+-- 9. Deliverydays integrity (In-Store must have 0)
+SELECT 'deliverydays_nonzero_for_instore' AS check_name, COUNT(*) 
+FROM `02_silver_db`.`silver_factsales` WHERE channel = 'In-Store' AND deliverydays != 0
+UNION ALL
+SELECT 'deliverydays_zero_for_online', COUNT(*) 
+FROM `02_silver_db`.`silver_factsales` WHERE channel IN ('Online', 'Mobile App') AND deliverydays = 0 AND isreturn = 0;
+
+-- 10. Product margin summary (gold view)
 SELECT COUNT(*) AS rows, SUM(total_revenue) AS total_revenue, AVG(margin_pct) AS avg_margin_pct
 FROM `03_gold_db`.`vw_001_product_category_margin`;
-

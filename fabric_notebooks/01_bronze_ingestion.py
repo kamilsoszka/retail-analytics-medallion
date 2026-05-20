@@ -1,5 +1,6 @@
 # Notebook: 01_bronze_ingestion
 # Load CSV files into 01_bronze_db with audit columns
+# Compatible with final generator (includes hour column, promoid=0, returnreason='No return')
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import input_file_name, current_timestamp, lit
@@ -20,7 +21,7 @@ existing = spark.sql(f"SHOW TABLES IN {bronze_schema}").collect()
 for t in existing:
     spark.sql(f"DROP TABLE IF EXISTS {bronze_schema}.{t.tableName}")
 
-# CSV files – no dim_manager.csv (generator v46 doesn't produce it)
+# CSV files – no dim_manager.csv (generator doesn't produce it)
 csv_files = [
     ("raw/dim_date.csv",        "bronze_dimdate"),
     ("raw/dim_customer.csv",    "bronze_dimcustomer"),
@@ -40,7 +41,7 @@ for csv_path, table_name in csv_files:
            .withColumn("_ingestion_ts", current_timestamp()) \
            .withColumn("_file_name", lit(csv_path))
     if "fact" in table_name:
-        df = df.repartition(10)
+        df = df.repartition(10)   # optimize for large fact table
     df.write.format("delta").mode("overwrite").saveAsTable(f"{bronze_schema}.{table_name}")
     print(f"Loaded {df.count()} rows into {bronze_schema}.{table_name}")
 

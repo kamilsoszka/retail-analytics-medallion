@@ -1,5 +1,7 @@
 -- ============================================================
 -- SQL SERVER (T-SQL) – SILVER/GOLD LAYER VALIDATION
+-- Compatible with final schema (promoid = 0 for no promotion)
+-- Last updated: 2026-05-21
 -- ============================================================
 
 -- 1. Row counts
@@ -36,7 +38,7 @@ SELECT TOP 10 salesid, datekey, productid, customerid, storeid, promoid, qty, un
 FROM dbo.factsales
 ORDER BY salesid;
 
--- 5. Orphan check (correct: NULL promoid is allowed)
+-- 5. Orphan check (correct: promoid = 0 is allowed as dummy "No Promotion")
 SELECT 'missing datekey' AS constraint_name, COUNT(*) FROM dbo.factsales f 
 LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey WHERE d.datekey IS NULL
 UNION ALL
@@ -50,7 +52,7 @@ SELECT 'missing storeid', COUNT(*) FROM dbo.factsales f
 LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid WHERE s.storeid IS NULL
 UNION ALL
 SELECT 'missing promoid', COUNT(*) FROM dbo.factsales f 
-LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE f.promoid IS NOT NULL AND p.promoid IS NULL
+LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE p.promoid IS NULL   -- promoid always has a value (0 or valid)
 ORDER BY constraint_name;
 
 -- 6. Percent range checks (fixed column name: tax_rate)

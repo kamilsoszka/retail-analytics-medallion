@@ -1,17 +1,14 @@
 # =====================================================================
-# generator.py
-# Retail Data Generator – 5M rows
-# Last updated: 2026-05-19
+# final_retail_gen.py
 # =====================================================================
-
-"""
-Realistic Retail Data Generator - 5M Rows Edition (FINAL WORKING)
-- END_DATE = today
-- In-Store deliverydays = 0 (guaranteed using np.where after clipping)
-- Overwrites existing CSV (deletes old file before writing)
-- No dummy promotion (NULL = no promotion)
-- Self-verifies generated CSV
-"""
+# Author:       AI Assistant
+# Generated:    2026-05-21 01:30:00 UTC
+# Purpose:      Generate 5M rows + dimensions
+#               - Unique store names (no duplicates)
+#               - Trend: decline (60k->50k) -> flat -> strong rise (50k->95k) at end
+#               - No NULL/empty values, deliverydays=0 for In-Store
+#               - hour column (0-23), promoid=0, returnreason='No return'
+# =====================================================================
 
 import numpy as np
 import pandas as pd
@@ -44,7 +41,7 @@ END_DATE = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 print(f"Generating data from {START_DATE.date()} to {END_DATE.date()}")
 
 # =====================================================================
-# NAME LISTS (full)
+# STATIC LISTS (all non-empty)
 # =====================================================================
 STORE_CHAINS = {
     'Supermarket': ['FreshMart', 'CityFood', 'DailyGrocer', 'MarketPlace', 'ValueSave', 'GoodMart'],
@@ -53,14 +50,20 @@ STORE_CHAINS = {
     'Department': ['CityCenter', 'TheGalleria', 'TownSquare', 'UrbanMall', 'GrandPlaza', 'MetroStore']
 }
 STORE_SUFFIXES = ['Center', 'Plaza', 'Market', 'Point', 'Hub', 'Square', 'Mart']
-
+REGION_CITY_MAP = {
+    'North': ['New York', 'Chicago', 'Boston', 'Seattle', 'Detroit', 'Minneapolis', 'Buffalo', 'Pittsburgh'],
+    'South': ['Houston', 'Dallas', 'Miami', 'Atlanta', 'Austin', 'Nashville', 'Orlando', 'San Antonio'],
+    'East': ['Philadelphia', 'Baltimore', 'Charlotte', 'Jacksonville', 'Washington DC', 'Tampa', 'Richmond'],
+    'West': ['Los Angeles', 'San Francisco', 'Phoenix', 'San Diego', 'Portland', 'Las Vegas', 'Sacramento'],
+    'Central': ['Kansas City', 'St. Louis', 'Omaha', 'Denver', 'Cleveland', 'Columbus', 'Indianapolis', 'Milwaukee']
+}
+REGIONS = list(REGION_CITY_MAP.keys())
 PROMO_TEMPLATES = {
     'Percentage': ['Spring Sale', 'Summer Deal', 'Winter Discount', 'Flash Sale', 'Clearance', 'Happy Hour', 'Member Special'],
     'Fixed Amount': ['Cashback', 'Save $', 'Discount Voucher', 'Price Drop', 'Instant Save', 'Coupon Special'],
     'BOGO': ['Buy 1 Get 1 Free', '2 for 1', '3 for 2', 'Multi-buy', 'Double Up'],
     'Free Shipping': ['Free Delivery', 'No Shipping Fee', 'Shipping included', 'Free Post']
 }
-
 PRODUCT_NAMES = {
     'Electronics': ['Smartphone', 'Laptop', 'Headphones', 'Smartwatch', 'Tablet', 'Monitor', 'Speaker', 'Camera', 'Console', 'Router'],
     'Home': ['Desk', 'Chair', 'Lamp', 'Sofa', 'Table', 'Bed', 'Cabinet', 'Vacuum', 'Blender', 'Toaster'],
@@ -70,26 +73,23 @@ PRODUCT_NAMES = {
 }
 PRODUCT_ADJECTIVES = ['Pro', 'Plus', 'Max', 'Lite', 'Ultra', 'Mini', 'Elite', 'Core', 'Prime', 'Select', 'Air', 'Studio']
 BRANDS = {
-    'Electronics': ['Sony','Samsung','Apple','Philips','LG','Dell','HP','Asus','Bose','Logitech'],
-    'Home': ['IKEA','Tefal','Bosch','Electrolux','Dyson','Nespresso','Kenwood','Braun','Rowenta','DeLonghi'],
-    'Sports': ['Nike','Adidas','Puma','Reebok','UnderArmour','NewBalance','Asics','Jordan','Mizuno','Salomon'],
-    'Kids': ['LEGO','Fisher-Price','Mattel','Hasbro','Playmobil','Barbie','HotWheels','Nerf','Cocomelon','PawPatrol'],
-    'Garden': ['Husqvarna','Bosch','Black and Decker','Gardena','Makita','Stihl','Fiskars','Wolf','Karcher','Bosch'],
+    'Electronics': ['Sony', 'Samsung', 'Apple', 'Philips', 'LG', 'Dell', 'HP', 'Asus', 'Bose', 'Logitech'],
+    'Home': ['IKEA', 'Tefal', 'Bosch', 'Electrolux', 'Dyson', 'Nespresso', 'Kenwood', 'Braun', 'Rowenta', 'DeLonghi'],
+    'Sports': ['Nike', 'Adidas', 'Puma', 'Reebok', 'UnderArmour', 'NewBalance', 'Asics', 'Jordan', 'Mizuno', 'Salomon'],
+    'Kids': ['LEGO', 'Fisher-Price', 'Mattel', 'Hasbro', 'Playmobil', 'Barbie', 'HotWheels', 'Nerf', 'Cocomelon', 'PawPatrol'],
+    'Garden': ['Husqvarna', 'Bosch', 'Black and Decker', 'Gardena', 'Makita', 'Stihl', 'Fiskars', 'Wolf', 'Karcher', 'Bosch']
 }
 FIRST_NAMES_MALE = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Daniel', 'Matthew']
 FIRST_NAMES_FEMALE = ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Lisa', 'Nancy']
 LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez']
-CITIES = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose']
-GENDERS = ['Male','Female','Non-binary']
-EDUCATION = ['High School','Bachelor','Master','PhD']
-MARITAL = ['Single','Married','Divorced','Widowed']
-CONTACT_PREF = ['Email','SMS','Phone','Mail']
-PAYMENT = ['Card','Cash','Bank Transfer','Digital Wallet','PayPal']
-CHANNELS = ['Online','In-Store','Mobile App','Phone Order']
-STORE_TYPES = ['Supermarket','Hypermarket','Convenience','Department']
-REGIONS = ['North','South','East','West','Central']
-RETURN_REASONS = ['Defective','Wrong item','Not as described','Changed mind','Late delivery','Other']
-
+GENDERS = ['Male', 'Female', 'Non-binary']
+EDUCATION = ['High School', 'Bachelor', 'Master', 'PhD']
+MARITAL = ['Single', 'Married', 'Divorced', 'Widowed']
+CONTACT_PREF = ['Email', 'SMS', 'Phone', 'Mail']
+PAYMENT = ['Card', 'Cash', 'Bank Transfer', 'Digital Wallet', 'PayPal']
+CHANNELS = ['Online', 'In-Store', 'Mobile App', 'Phone Order']
+STORE_TYPES = ['Supermarket', 'Hypermarket', 'Convenience', 'Department']
+RETURN_REASONS = ['Defective', 'Wrong item', 'Not as described', 'Changed mind', 'Late delivery', 'Other']
 CAT_NAMES = ['Electronics', 'Home', 'Sports', 'Kids', 'Garden']
 CATEGORY_CFG = {
     'Electronics': {'price_lo': 250, 'price_hi': 600, 'weight_lo': 0.3, 'weight_hi': 3.0, 'tax_rate': 0.21, 'warranty_prob': 0.9, 'return_rate_base': 0.03},
@@ -99,47 +99,61 @@ CATEGORY_CFG = {
     'Garden':      {'price_lo': 30, 'price_hi': 120, 'weight_lo': 0.5, 'weight_hi': 12.0, 'tax_rate': 0.21, 'warranty_prob': 0.6, 'return_rate_base': 0.07},
 }
 
-print("Generating dimensions...")
+def clean_df(df, string_default='Unknown', int_default=0, float_default=0.0):
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].fillna(string_default)
+        df[col] = df[col].replace('', string_default)
+        df[col] = df[col].astype(str)
+    for col in df.select_dtypes(include=['int64', 'int32']).columns:
+        df[col] = df[col].fillna(int_default).astype(int)
+    for col in df.select_dtypes(include=['float64', 'float32']).columns:
+        df[col] = df[col].fillna(float_default)
+    return df
 
 # =====================================================================
-# DIMENSION: STORES (unchanged)
+# DIMENSION: STORES (UNIQUE NAMES)
 # =====================================================================
-store_type_list = []
-while len(store_type_list) < N_STORES:
-    for t in STORE_TYPES:
-        for chain in STORE_CHAINS.get(t, STORE_CHAINS['Supermarket']):
-            for city in CITIES:
-                for suffix in STORE_SUFFIXES:
-                    store_type_list.append((t, chain, city, suffix))
-                    if len(store_type_list) >= N_STORES * 2:
-                        break
-                if len(store_type_list) >= N_STORES * 2:
-                    break
-            if len(store_type_list) >= N_STORES * 2:
-                break
-        if len(store_type_list) >= N_STORES * 2:
-            break
-
-random.shuffle(store_type_list)
-selected_stores = store_type_list[:N_STORES]
-
+print("Generating dim_store with unique names...")
 store_ids = np.arange(1, N_STORES + 1)
-store_types = [s[0] for s in selected_stores]
-store_chain = [s[1] for s in selected_stores]
-store_cities = [s[2] for s in selected_stores]
-store_suffix = [s[3] for s in selected_stores]
-store_name = [f"{chain} {city} {suffix}" for chain, city, suffix in zip(store_chain, store_cities, store_suffix)]
+unique_names = set()
+store_data = []  # list of (name, city, type, region, chain, suffix)
+max_attempts = N_STORES * 20
+attempt = 0
+while len(unique_names) < N_STORES and attempt < max_attempts:
+    stype = np.random.choice(STORE_TYPES)
+    reg = random.choice(REGIONS)
+    city = random.choice(REGION_CITY_MAP[reg])
+    chain = random.choice(STORE_CHAINS[stype])
+    suffix = random.choice(STORE_SUFFIXES)
+    name = f"{chain} {city} {suffix}"
+    if name not in unique_names:
+        unique_names.add(name)
+        store_data.append((name, city, stype, reg, chain, suffix))
+    attempt += 1
+# If not enough, add numbered fallback names
+if len(store_data) < N_STORES:
+    for i in range(len(store_data), N_STORES):
+        name = f"Store_{i+1}"
+        unique_names.add(name)
+        store_data.append((name, "Unknown", "Supermarket", "Central", "Store", "Mart"))
+
+# Assign to arrays
+store_name = [d[0] for d in store_data[:N_STORES]]
+store_cities = [d[1] for d in store_data[:N_STORES]]
+store_types = [d[2] for d in store_data[:N_STORES]]
+store_regions = [d[3] for d in store_data[:N_STORES]]
+store_chains = [d[4] for d in store_data[:N_STORES]]
+store_suffixes = [d[5] for d in store_data[:N_STORES]]
 
 store_size_mult = np.random.lognormal(mean=0.2, sigma=0.9, size=N_STORES).clip(0.3, 4.0)
-store_regions = np.random.choice(REGIONS, N_STORES)
-city_rent_mult = {c: 1.0 + np.random.uniform(0.0, 0.8) for c in CITIES}
+city_rent_mult = {city: 1.0 + np.random.uniform(0.0, 0.8) for city in store_cities}
 store_sizem2 = np.where(np.array(store_types) == 'Hypermarket', np.random.randint(2500, 5000, N_STORES),
                 np.where(np.array(store_types) == 'Supermarket', np.random.randint(800, 2500, N_STORES),
                 np.where(np.array(store_types) == 'Department', np.random.randint(1200, 3500, N_STORES),
                 np.random.randint(150, 800, N_STORES))))
 store_staff = np.clip((store_sizem2 / 45 + np.random.normal(0, 5, N_STORES)).astype(int), 3, 120)
 store_parking = np.clip((store_sizem2 / 25 + np.random.normal(0, 10, N_STORES)).astype(int), 0, 300)
-store_annualrent = (store_sizem2 * 12 * np.array([city_rent_mult[c] for c in store_cities]) *
+store_annualrent = (store_sizem2 * 12 * np.array([city_rent_mult.get(c, 1.0) for c in store_cities]) *
                     np.where(np.array(store_types) == 'Hypermarket', 0.8,
                     np.where(np.array(store_types) == 'Convenience', 1.4, 1.0))).round(0)
 store_rating = np.clip(2.0 + (store_staff/120)*0.8 + (store_parking/300)*0.5 + np.random.uniform(0, 1.2, N_STORES), 2.0, 5.0).round(1)
@@ -151,13 +165,13 @@ store_df = pd.DataFrame({
     'type': store_types,
     'staff': store_staff,
     'sizem2': store_sizem2,
-    'hascafe': np.random.choice([0,1], N_STORES, p=[0.6,0.4]),
+    'hascafe': np.random.choice([0, 1], N_STORES, p=[0.6, 0.4]),
     'openingyear': np.random.randint(1985, 2023, N_STORES),
     'region': store_regions,
-    'renovationyear': np.random.choice([0]+list(range(2010,2024)), N_STORES, p=[0.35]+[0.65/14]*14),
+    'renovationyear': np.random.choice([0] + list(range(2010, 2024)), N_STORES, p=[0.35] + [0.65/14]*14),
     'parkingspots': store_parking,
     'storerating': store_rating,
-    'hasdeliveryservice': np.random.choice([0,1], N_STORES, p=[0.4,0.6]),
+    'hasdeliveryservice': np.random.choice([0, 1], N_STORES, p=[0.4, 0.6]),
     'floornumber': np.random.randint(1, 6, N_STORES),
     'distancetocitycenterkm': np.random.uniform(0.5, 25.0, N_STORES).round(1),
     'annualrentcost': store_annualrent,
@@ -167,31 +181,32 @@ renov = store_df['renovationyear'].values
 op = store_df['openingyear'].values
 renov = np.where((renov != 0) & (renov < op), op, renov)
 store_df['renovationyear'] = renov
+store_df = clean_df(store_df, string_default='Unknown', int_default=0, float_default=0.0)
 store_df.to_csv(f"{OUTPUT_DIR}/dim_store.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: PRODUCTS (with isactive fix)
+# DIMENSION: PRODUCTS
 # =====================================================================
+print("Generating dim_product...")
 product_pool = []
 while len(product_pool) < N_PRODUCTS * 1.5:
-    for cat in CAT_NAMES:
-        for brand in BRANDS[cat]:
-            for adj in PRODUCT_ADJECTIVES:
-                for noun in PRODUCT_NAMES[cat]:
-                    variant = np.random.choice(['', 'V2', 'X', 'Series 5', 'Mk1', '2024', 'Ltd', 'Gen3'], p=[0.4, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05, 0.05])
-                    name = f"{brand} {adj} {noun} {variant}".strip()
-                    if name not in product_pool:
-                        product_pool.append(name)
-    if len(product_pool) > N_PRODUCTS * 1.2:
-        break
-
+    cat = random.choice(CAT_NAMES)
+    brand = random.choice(BRANDS[cat])
+    adj = random.choice(PRODUCT_ADJECTIVES)
+    noun = random.choice(PRODUCT_NAMES[cat])
+    variant = np.random.choice(['', 'V2', 'X', 'Series 5', 'Mk1', '2024', 'Ltd', 'Gen3'], p=[0.4, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05, 0.05])
+    name = f"{brand} {adj} {noun} {variant}".strip()
+    if name not in product_pool:
+        product_pool.append((name, cat, brand))
 random.shuffle(product_pool)
-unique_product_names = product_pool[:N_PRODUCTS]
+selected_products = product_pool[:N_PRODUCTS]
 
 product_ids = np.arange(1, N_PRODUCTS + 1)
-product_categories = np.random.choice(CAT_NAMES, N_PRODUCTS, p=[0.25, 0.25, 0.20, 0.15, 0.15])
-product_brands = [np.random.choice(BRANDS[cat]) for cat in product_categories]
+product_name = [p[0] for p in selected_products]
+product_categories = np.array([p[1] for p in selected_products])
+product_brands = [p[2] for p in selected_products]
 product_brand_premium = np.random.uniform(0.9, 1.5, N_PRODUCTS)
+
 product_weights = []
 product_unitprice = []
 product_unitcost = []
@@ -200,6 +215,7 @@ product_warranty = []
 product_ecoscore = []
 product_material = []
 product_margin_pct = []
+
 for i, cat in enumerate(product_categories):
     cfg = CATEGORY_CFG[cat]
     w = round(np.random.uniform(cfg['weight_lo'], cfg['weight_hi']), 2)
@@ -212,27 +228,19 @@ for i, cat in enumerate(product_categories):
     product_unitcost.append(cost)
     product_tax_rate.append(cfg['tax_rate'])
     product_warranty.append(int(np.random.random() < cfg['warranty_prob']))
-    e_score = int(np.random.uniform(20, 200))
-    product_ecoscore.append(e_score)
-    product_material.append(np.random.choice(['Plastic','Metal','Wood','Glass','Fabric']))
+    product_ecoscore.append(int(np.random.uniform(20, 200)))
+    product_material.append(np.random.choice(['Plastic', 'Metal', 'Wood', 'Glass', 'Fabric']))
     product_margin_pct.append(margin)
 
-product_unitprice = np.array(product_unitprice)
-product_unitcost = np.array(product_unitcost)
-product_tax_rate = np.array(product_tax_rate)
-product_weights = np.array(product_weights)
-product_margin_pct = np.array(product_margin_pct)
-product_categories = np.array(product_categories)
-product_ecoscore = np.array(product_ecoscore)
-
-product_isactive = np.random.choice([0,1], N_PRODUCTS, p=[0.05, 0.95]).astype(int)
-product_stockstatus = np.where(product_isactive == 0, 'Out of Stock', np.random.choice(['In Stock','Low Stock','Out of Stock'], N_PRODUCTS, p=[0.78, 0.17, 0.05]))
-product_releaseyear = np.random.choice([2018,2019,2020,2021,2022,2023,2024,2025], N_PRODUCTS, p=[0.05,0.08,0.12,0.18,0.25,0.20,0.10,0.02])
+product_isactive = np.random.choice([0, 1], N_PRODUCTS, p=[0.05, 0.95]).astype(int)
+product_stockstatus = np.where(product_isactive == 0, 'Out of Stock',
+                               np.random.choice(['In Stock', 'Low Stock', 'Out of Stock'], N_PRODUCTS, p=[0.78, 0.17, 0.05]))
+product_releaseyear = np.random.choice([2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], N_PRODUCTS, p=[0.05, 0.08, 0.12, 0.18, 0.25, 0.20, 0.10, 0.02])
 product_skucount = np.random.poisson(2.5, N_PRODUCTS) + 1
-product_isdiscontinued = np.where(product_releaseyear < 2021, np.random.choice([0,1], N_PRODUCTS, p=[0.6, 0.4]), np.random.choice([0,1], N_PRODUCTS, p=[0.95, 0.05])).astype(int)
+product_isdiscontinued = np.where(product_releaseyear < 2021,
+                                  np.random.choice([0, 1], N_PRODUCTS, p=[0.6, 0.4]),
+                                  np.random.choice([0, 1], N_PRODUCTS, p=[0.95, 0.05])).astype(int)
 product_rating = np.clip(2.0 + np.random.normal(0, 0.8, N_PRODUCTS), 1.0, 5.0).round(1)
-product_name = unique_product_names
-
 product_isactive = np.where(product_isdiscontinued == 1, 0, product_isactive)
 
 product_df = pd.DataFrame({
@@ -244,16 +252,16 @@ product_df = pd.DataFrame({
     'unitprice': product_unitprice,
     'margin_pct': product_margin_pct,
     'weight': product_weights,
-    'color': np.random.choice(['Red','Blue','Green','Black','White','Gray','Silver','Gold'], N_PRODUCTS),
+    'color': np.random.choice(['Red', 'Blue', 'Green', 'Black', 'White', 'Gray', 'Silver', 'Gold'], N_PRODUCTS),
     'material': product_material,
     'supplierid': np.random.randint(1, 51, N_PRODUCTS),
     'isactive': product_isactive,
     'minstock': np.random.randint(2, 100, N_PRODUCTS),
     'tax_rate': product_tax_rate,
     'haswarranty': product_warranty,
-    'ecofriendly': (product_ecoscore > 100).astype(int),
+    'ecofriendly': (np.array(product_ecoscore) > 100).astype(int),
     'seasonalityfactor': np.random.uniform(0.7, 1.3, N_PRODUCTS).round(2),
-    'warrantymonths': np.where(product_warranty==1, np.random.choice([12,24,36], N_PRODUCTS), 0),
+    'warrantymonths': np.where(np.array(product_warranty) == 1, np.random.choice([12, 24, 36], N_PRODUCTS), 0),
     'ecoscore': product_ecoscore,
     'releaseyear': product_releaseyear,
     'skucount': product_skucount,
@@ -263,26 +271,46 @@ product_df = pd.DataFrame({
 })
 if not product_df['name'].is_unique:
     product_df['name'] = product_df['name'] + ' - ' + product_df['productid'].astype(str)
+product_df = clean_df(product_df, string_default='Unknown Product', int_default=0, float_default=0.0)
 product_df.to_csv(f"{OUTPUT_DIR}/dim_product.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: PROMOTIONS – NO DUMMY ROW (only real promos 1..N_PROMOTIONS)
+# DIMENSION: PROMOTIONS (dummy row promoid=0)
 # =====================================================================
+print("Generating dim_promotion...")
+dummy_promo = pd.DataFrame([{
+    'promoid': 0,
+    'promoname': 'No Promotion',
+    'discount_pct': 0.0,
+    'discount_fixed': 0.0,
+    'type': 'None',
+    'isactive': 1,
+    'minspend': 0,
+    'channel': 'All',
+    'budget': 0,
+    'startdate': START_DATE.strftime('%Y-%m-%d'),
+    'enddate': END_DATE.strftime('%Y-%m-%d'),
+    'targetaudience': 'All',
+    'maxdiscountcap': 0,
+    'isstackable': 0,
+    'redemption_rate': 0,
+    'coderequired': 0,
+    'promoupliftfactor': 1.0
+}])
+
 promo_ids = np.arange(1, N_PROMOTIONS + 1)
-promo_types = np.random.choice(['Percentage','Fixed Amount','BOGO','Free Shipping'], N_PROMOTIONS, p=[0.35,0.25,0.25,0.15])
-promo_channels = np.where(promo_types == 'Free Shipping', 'Online', np.random.choice(['Email','SMS','App','InStore','All'], N_PROMOTIONS))
+promo_types = np.random.choice(['Percentage', 'Fixed Amount', 'BOGO', 'Free Shipping'], N_PROMOTIONS, p=[0.35, 0.25, 0.25, 0.15])
+promo_channels = np.where(promo_types == 'Free Shipping', 'Online', np.random.choice(['Email', 'SMS', 'App', 'InStore', 'All'], N_PROMOTIONS))
 promo_discount_pct = np.where(promo_types == 'Percentage', np.random.uniform(0.10, 0.45, N_PROMOTIONS), 0.0)
 promo_discount_fixed = np.where(promo_types == 'Fixed Amount', np.random.uniform(3, 30, N_PROMOTIONS), 0.0)
 promo_budgets = (np.where(promo_types == 'Percentage', promo_discount_pct, promo_discount_fixed/100) * N_SALES * 0.002 * np.random.uniform(0.8, 1.5, N_PROMOTIONS)).round(0)
-promo_uplift_map = {
-    'BOGO': np.random.uniform(1.8, 2.2, N_PROMOTIONS),
-    'Percentage': np.random.uniform(1.2, 1.4, N_PROMOTIONS),
-    'Fixed Amount': np.random.uniform(1.05, 1.15, N_PROMOTIONS),
-    'Free Shipping': np.random.uniform(1.0, 1.02, N_PROMOTIONS)
-}
+
 promo_uplift = np.zeros(N_PROMOTIONS)
 for i, pt in enumerate(promo_types):
-    promo_uplift[i] = promo_uplift_map[pt][i]
+    if pt == 'BOGO': promo_uplift[i] = np.random.uniform(1.8, 2.2)
+    elif pt == 'Percentage': promo_uplift[i] = np.random.uniform(1.2, 1.4)
+    elif pt == 'Fixed Amount': promo_uplift[i] = np.random.uniform(1.05, 1.15)
+    else: promo_uplift[i] = np.random.uniform(1.0, 1.02)
 
 max_days = max(1, (END_DATE - START_DATE).days)
 promo_start = (START_DATE + pd.to_timedelta(np.random.randint(0, min(900, max_days), N_PROMOTIONS), unit='D')).to_pydatetime()
@@ -323,25 +351,28 @@ promo_df = pd.DataFrame({
     'discount_fixed': promo_discount_fixed.round(2),
     'type': promo_types,
     'isactive': promo_isactive,
-    'minspend': np.random.choice([0,10,25,50,100], N_PROMOTIONS, p=[0.25,0.30,0.20,0.15,0.10]),
+    'minspend': np.random.choice([0, 10, 25, 50, 100], N_PROMOTIONS, p=[0.25, 0.30, 0.20, 0.15, 0.10]),
     'channel': promo_channels,
     'budget': promo_budgets,
     'startdate': promo_start_str,
     'enddate': promo_end_str,
-    'targetaudience': np.random.choice(['All','New','Loyal','HighSpend'], N_PROMOTIONS, p=[0.40,0.15,0.25,0.20]),
+    'targetaudience': np.random.choice(['All', 'New', 'Loyal', 'HighSpend'], N_PROMOTIONS, p=[0.40, 0.15, 0.25, 0.20]),
     'maxdiscountcap': np.random.uniform(5, 120, N_PROMOTIONS).round(2),
-    'isstackable': np.random.choice([0,1], N_PROMOTIONS, p=[0.85,0.15]),
+    'isstackable': np.random.choice([0, 1], N_PROMOTIONS, p=[0.85, 0.15]),
     'redemption_rate': np.random.uniform(0.02, 0.35, N_PROMOTIONS).round(3),
-    'coderequired': np.random.choice([0,1], N_PROMOTIONS, p=[0.60,0.40]),
+    'coderequired': np.random.choice([0, 1], N_PROMOTIONS, p=[0.60, 0.40]),
     'promoupliftfactor': promo_uplift.round(3)
 })
+promo_df = pd.concat([dummy_promo, promo_df], ignore_index=True)
+promo_df = clean_df(promo_df, string_default='Unknown')
 promo_df.to_csv(f"{OUTPUT_DIR}/dim_promotion.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: CUSTOMERS (unchanged)
+# DIMENSION: CUSTOMERS
 # =====================================================================
+print("Generating dim_customer...")
 customer_ids = np.arange(1, N_CUSTOMERS + 1)
-gender_choice = np.random.choice(['Male','Female'], N_CUSTOMERS, p=[0.5, 0.5])
+gender_choice = np.random.choice(['Male', 'Female'], N_CUSTOMERS, p=[0.5, 0.5])
 raw_first = []
 raw_last = []
 for i in range(N_CUSTOMERS):
@@ -367,9 +398,7 @@ for (first, last) in pairs:
     total = pair_counts[(first, last)]
     if total == 1:
         fullname = f"{first} {last}"
-        email_local = f"{first.lower()}.{last.lower()}".replace(" ", ".")
-        email_local = re.sub(r'[^a-z0-9.]', '', email_local)
-        email = f"{email_local}@example.com"
+        email_suffix = ""
     else:
         if cnt == 0:
             fullname = f"{first} {last}"
@@ -377,9 +406,9 @@ for (first, last) in pairs:
         else:
             fullname = f"{first} {last} {cnt+1}"
             email_suffix = str(cnt+1)
-        email_local = f"{first.lower()}.{last.lower()}{email_suffix}".replace(" ", ".")
-        email_local = re.sub(r'[^a-z0-9.]', '', email_local)
-        email = f"{email_local}@example.com"
+    email_local = f"{first.lower()}.{last.lower()}{email_suffix}".replace(" ", ".")
+    email_local = re.sub(r'[^a-z0-9.]', '', email_local)
+    email = f"{email_local}@example.com"
     fullname_list.append(fullname)
     email_list.append(email)
 
@@ -389,7 +418,7 @@ age_probs = age_probs / age_probs.sum()
 customer_age = np.random.choice(age_range, N_CUSTOMERS, p=age_probs)
 
 customer_income = np.random.lognormal(mean=9.8, sigma=0.6, size=N_CUSTOMERS).clip(8000, 100000)
-customer_tier = np.where(customer_income > 70000, 'Platinum', 
+customer_tier = np.where(customer_income > 70000, 'Platinum',
                 np.where(customer_income > 45000, 'Gold',
                 np.where(customer_income > 25000, 'Silver', 'Bronze')))
 customer_spend_mult = np.where(customer_tier == 'Platinum', np.random.uniform(3.0, 6.0, N_CUSTOMERS),
@@ -397,16 +426,15 @@ customer_spend_mult = np.where(customer_tier == 'Platinum', np.random.uniform(3.
                         np.where(customer_tier == 'Silver', np.random.uniform(0.8, 1.5, N_CUSTOMERS), np.random.uniform(0.2, 0.6, N_CUSTOMERS))))
 customer_points = np.clip((customer_spend_mult * 45 + np.random.poisson(20, N_CUSTOMERS)).astype(int), 0, 800)
 regdate_days = np.random.exponential(600, N_CUSTOMERS).astype(int)
-max_days = (END_DATE - START_DATE).days
-regdate_days_clipped = np.minimum(regdate_days, max_days)
+max_days_date = (END_DATE - START_DATE).days
+regdate_days_clipped = np.minimum(regdate_days, max_days_date)
 customer_regdate = [(START_DATE + timedelta(days=int(d))).strftime('%Y-%m-%d') for d in regdate_days_clipped]
 customer_totalSpend = (customer_spend_mult * np.random.exponential(180, N_CUSTOMERS)).round(2)
-customer_loyaltysegment = customer_tier
 customer_satisfactionscore = np.clip(2.5 + (customer_tier == 'Platinum')*1.0 + (customer_tier == 'Gold')*0.6 + np.random.normal(0, 0.8, N_CUSTOMERS), 1.0, 5.0).round(1)
-customer_dayssincelast = np.where(customer_tier == 'Platinum', np.random.exponential(5, N_CUSTOMERS), 
-                           np.where(customer_tier == 'Gold', np.random.exponential(12, N_CUSTOMERS), 
+customer_dayssincelast = np.where(customer_tier == 'Platinum', np.random.exponential(5, N_CUSTOMERS),
+                           np.where(customer_tier == 'Gold', np.random.exponential(12, N_CUSTOMERS),
                            np.random.exponential(35, N_CUSTOMERS))).astype(int)
-customer_hassubscription = np.random.choice([0,1], N_CUSTOMERS, p=[0.65, 0.35])
+customer_hassubscription = np.random.choice([0, 1], N_CUSTOMERS, p=[0.65, 0.35])
 customer_childrencount = np.random.poisson(np.where(customer_age < 30, 0.3, np.where(customer_age < 45, 0.9, 0.4)), N_CUSTOMERS).astype(int)
 
 contact_probs = np.zeros((N_CUSTOMERS, 4))
@@ -418,39 +446,43 @@ contact_probs = np.maximum(contact_probs, 0.05)
 contact_probs = contact_probs / contact_probs.sum(axis=1, keepdims=True)
 customer_contact = np.array([np.random.choice(CONTACT_PREF, p=p) for p in contact_probs])
 
+all_cities = sum(REGION_CITY_MAP.values(), [])
+customer_cities = np.random.choice(all_cities, N_CUSTOMERS)
+
 customer_df = pd.DataFrame({
     'customerid': customer_ids,
     'fullname': fullname_list,
     'email': email_list,
     'age': customer_age,
     'gender': np.random.choice(GENDERS, N_CUSTOMERS, p=[0.48, 0.48, 0.04]),
-    'city': np.random.choice(CITIES, N_CUSTOMERS),
+    'city': customer_cities,
     'tier': customer_tier,
     'points': customer_points,
-    'isactive': np.random.choice([0,1], N_CUSTOMERS, p=[0.06, 0.94]),
-    'lang': np.random.choice(['en','de','fr','es','pl','it'], N_CUSTOMERS, p=[0.35,0.20,0.15,0.15,0.10,0.05]),
+    'isactive': np.random.choice([0, 1], N_CUSTOMERS, p=[0.06, 0.94]),
+    'lang': np.random.choice(['en', 'de', 'fr', 'es', 'pl', 'it'], N_CUSTOMERS, p=[0.35, 0.20, 0.15, 0.15, 0.10, 0.05]),
     'totalspend': customer_totalSpend,
     'regdate': customer_regdate,
     'annualincome': customer_income.round(2),
-    'incomebracket': pd.cut(customer_income, bins=[0,25000,50000,75000,100000,1e9], labels=['Low','Medium','High','Very High','Ultra High']).astype(str),
-    'education': np.random.choice(EDUCATION, N_CUSTOMERS, p=[0.30,0.40,0.25,0.05]),
+    'incomebracket': pd.cut(customer_income, bins=[0, 25000, 50000, 75000, 100000, 1e9], labels=['Low', 'Medium', 'High', 'Very High', 'Ultra High']).astype(str),
+    'education': np.random.choice(EDUCATION, N_CUSTOMERS, p=[0.30, 0.40, 0.25, 0.05]),
     'maritalstatus': np.random.choice(MARITAL, N_CUSTOMERS),
     'childrencount': customer_childrencount,
-    'loyaltysegment': customer_loyaltysegment,
+    'loyaltysegment': customer_tier,
     'satisfactionscore': customer_satisfactionscore,
     'dayssincelastpurchase': customer_dayssincelast,
     'hassubscription': customer_hassubscription,
     'preferredcontact': customer_contact,
     'spendmultiplier': customer_spend_mult.round(3)
 })
+customer_df = clean_df(customer_df, string_default='Unknown', int_default=0, float_default=0.0)
 customer_df.to_csv(f"{OUTPUT_DIR}/dim_customer.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: DATE (dynamic)
+# DIMENSION: DATE
 # =====================================================================
+print("Generating dim_date...")
 dates = pd.date_range(START_DATE, END_DATE, freq='D')
 isholiday_arr = (np.isin(dates.month, [12, 1]) | (dates.month == 7)).astype(int)
-
 date_df = pd.DataFrame({
     'datekey': dates.strftime("%Y%m%d").astype(int),
     'fulldate': dates.strftime("%Y-%m-%d"),
@@ -470,49 +502,30 @@ date_df = pd.DataFrame({
     'yearweeknumber': (dates.isocalendar().week.astype(int) + dates.year * 100),
     'isholiday': isholiday_arr
 })
+date_df = clean_df(date_df, string_default='1900-01-01')
 date_df.to_csv(f"{OUTPUT_DIR}/dim_date.csv", index=False, encoding='utf-8')
 
-print("Dimensions exported successfully ✓")
+print("All dimension files exported successfully ✓")
 
-# ============================================================================
-# MODERATE TREND GENERATION (unchanged)
-# ============================================================================
-print("Generating Moderate Trend Data...")
-n = len(dates)
+# =====================================================================
+# TREND: DECLINE -> FLAT -> STRONG RISE AT THE END
+# =====================================================================
+print("Generating trend: decline (60k->50k) then flat, then strong rise to 95k at end...")
+n_dates = len(dates)
+decline_end = int(n_dates * 0.5)      # first 50% -> decline from 60k to 50k
+flat_end = int(n_dates * 0.7)         # next 20% -> flat at 50k
+# last 30% -> strong rise from 50k to 95k
 
-phase1_end_idx = min((datetime(2023, 3, 31) - START_DATE).days, n - 1)
-phase2_end_idx = min((datetime(2023, 12, 31) - START_DATE).days, n - 1)
-phase3_end_idx = min((datetime(2025, 12, 31) - START_DATE).days, n - 1)
-phase4_mid_idx = min((datetime(2026, 6, 30) - START_DATE).days, n - 1)
+start_val = 60000
+decline_val = 50000
+flat_val = 50000
+rise_start = 50000
+final_peak = 95000
 
-start_val = 50000
-soft_land_val = 20000
-stable_val = 22000
-moderate_peak_val = 45000
-correction_val = 35000
-final_rally_val = 42000
-
-trend = np.zeros(n)
-
-len1 = phase1_end_idx + 1
-if len1 > 0:
-    trend[:len1] = np.linspace(start_val, soft_land_val, len1)
-
-if phase2_end_idx > phase1_end_idx:
-    len2 = phase2_end_idx - phase1_end_idx
-    trend[phase1_end_idx+1:phase2_end_idx+1] = np.linspace(soft_land_val, stable_val, len2)
-
-if phase3_end_idx > phase2_end_idx:
-    len3 = phase3_end_idx - phase2_end_idx
-    trend[phase2_end_idx+1:phase3_end_idx+1] = np.linspace(stable_val, moderate_peak_val, len3)
-
-if phase4_mid_idx > phase3_end_idx:
-    len4 = phase4_mid_idx - phase3_end_idx
-    trend[phase3_end_idx+1:phase4_mid_idx+1] = np.linspace(moderate_peak_val, correction_val, len4)
-
-if n - 1 > phase4_mid_idx:
-    len5 = n - (phase4_mid_idx + 1)
-    trend[phase4_mid_idx+1:] = np.linspace(correction_val, final_rally_val, len5)
+trend = np.zeros(n_dates)
+trend[:decline_end] = np.linspace(start_val, decline_val, decline_end)
+trend[decline_end:flat_end] = flat_val
+trend[flat_end:] = np.linspace(rise_start, final_peak, n_dates - flat_end)
 
 window = 7
 ma = np.convolve(trend, np.ones(window)/window, mode='same')
@@ -520,41 +533,27 @@ ma[:window//2] = trend[:window//2]
 ma[-window//2:] = trend[-window//2:]
 smooth_trend = ma
 
-drift_rates = np.zeros(n)
-drift_rates[0] = 0
-for i in range(1, n):
+drift_rates = np.zeros(n_dates)
+for i in range(1, n_dates):
     if smooth_trend[i-1] != 0:
         drift_rates[i] = (smooth_trend[i] - smooth_trend[i-1]) / smooth_trend[i-1]
 
 volatility = 0.02
-noise = np.random.normal(0, 1, n)
+noise = np.random.normal(0, 1, n_dates)
 smoothed_noise = np.convolve(noise, np.ones(3)/3, mode='same')
-
-final_values = np.zeros(n)
+final_values = np.zeros(n_dates)
 final_values[0] = smooth_trend[0]
-for i in range(1, n):
+for i in range(1, n_dates):
     daily_change = drift_rates[i] + volatility * smoothed_noise[i]
     final_values[i] = final_values[i-1] * (1 + daily_change)
 
-daily_net_sales_target = np.round(final_values).astype(int)
-daily_net_sales_target = np.maximum(daily_net_sales_target, 1000)
+daily_net_sales_target = np.maximum(np.round(final_values).astype(int), 1000)
+print(f"Trend: start={daily_net_sales_target[0]}, min={daily_net_sales_target.min()}, end={daily_net_sales_target[-1]}")
 
-print("\n" + "="*60)
-print("MODERATE TREND Statistics")
-print("="*60)
-print(f"Start ({dates[0].date()}): {daily_net_sales_target[0]}")
-print(f"After Soft Landing (approx {dates[min(phase1_end_idx, n-1)].date()}): {daily_net_sales_target[min(phase1_end_idx, n-1)]}")
-print(f"End 2023 (approx {dates[min(phase2_end_idx, n-1)].date()}): {daily_net_sales_target[min(phase2_end_idx, n-1)]}")
-print(f"Peak (approx {dates[min(phase3_end_idx, n-1)].date()}): {daily_net_sales_target[min(phase3_end_idx, n-1)]}")
-print(f"Correction low (approx {dates[min(phase4_mid_idx, n-1)].date()}): {daily_net_sales_target[min(phase4_mid_idx, n-1)]}")
-print(f"End ({dates[-1].date()}): {daily_net_sales_target[-1]}")
-print("="*60)
-
-# ============================================================================
-# GENERATE FACT SALES – WITH DELIVERYDAYS FIX (np.where)
-# ============================================================================
-print("\nGenerating fact_sales rows (5M) in chunks...")
-
+# =====================================================================
+# FACT SALES GENERATION (with hour column, no NULLs)
+# =====================================================================
+print("\nGenerating fact_sales (5M rows) in chunks...")
 datekeys = date_df['datekey'].values
 product_ids_arr = product_df['productid'].values
 customer_ids_arr = customer_df['customerid'].values
@@ -579,7 +578,6 @@ expected_n_transactions = daily_net_sales_target / avg_transaction_value
 total_expected = expected_n_transactions.sum()
 daily_n_trans = np.floor(N_SALES * expected_n_transactions / total_expected).astype(int)
 diff = N_SALES - daily_n_trans.sum()
-
 if diff > 0:
     idx_sorted = np.argsort(daily_net_sales_target)[::-1]
     for i in idx_sorted[:diff]:
@@ -588,8 +586,7 @@ elif diff < 0:
     idx_sorted = np.argsort(daily_n_trans)[::-1]
     to_remove = abs(diff)
     for i in idx_sorted:
-        if to_remove == 0:
-            break
+        if to_remove == 0: break
         if daily_n_trans[i] > 0:
             daily_n_trans[i] -= 1
             to_remove -= 1
@@ -597,25 +594,65 @@ elif diff < 0:
         daily_n_trans[0] -= to_remove
     elif to_remove > 0:
         daily_n_trans[0] = 0
-
 daily_n_trans = np.maximum(daily_n_trans, 0)
+
+def generate_hours_vectorized(channels, store_types=None):
+    n = len(channels)
+    hours = np.zeros(n, dtype=np.uint8)
+    online_probs = np.array([0.01,0.01,0.01,0.01,0.01,0.01,0.02,0.03,0.04,0.05,0.05,0.05,0.05,0.05,0.06,0.07,0.08,0.09,0.09,0.07,0.05,0.03,0.02,0.01])
+    online_probs /= online_probs.sum()
+    mobile_probs = np.array([0.01,0.01,0.01,0.01,0.02,0.03,0.05,0.06,0.07,0.08,0.08,0.07,0.07,0.06,0.06,0.06,0.05,0.04,0.03,0.02,0.02,0.01,0.01,0.01])
+    mobile_probs /= mobile_probs.sum()
+    phone_probs = np.zeros(24)
+    phone_probs[9:21] = 1/12
+    phone_probs /= phone_probs.sum()
+    instore_default_probs = np.zeros(24)
+    instore_default_probs[8:21] = 1/13
+    instore_default_probs /= instore_default_probs.sum()
+    instore_broad_probs = np.zeros(24)
+    instore_broad_probs[6:23] = 1/17
+    instore_broad_probs /= instore_broad_probs.sum()
+
+    mask_online = (channels == 'Online')
+    if mask_online.any():
+        hours[mask_online] = np.random.choice(24, size=mask_online.sum(), p=online_probs)
+    mask_mobile = (channels == 'Mobile App')
+    if mask_mobile.any():
+        hours[mask_mobile] = np.random.choice(24, size=mask_mobile.sum(), p=mobile_probs)
+    mask_phone = (channels == 'Phone Order')
+    if mask_phone.any():
+        hours[mask_phone] = np.random.choice(24, size=mask_phone.sum(), p=phone_probs)
+    mask_instore = (channels == 'In-Store')
+    if mask_instore.any():
+        if store_types is not None:
+            broad_mask = np.isin(store_types[mask_instore], ['Convenience', 'Hypermarket'])
+            broad_idx = np.where(mask_instore)[0][broad_mask]
+            if len(broad_idx) > 0:
+                hours[broad_idx] = np.random.choice(24, size=len(broad_idx), p=instore_broad_probs)
+            default_idx = np.where(mask_instore)[0][~broad_mask]
+            if len(default_idx) > 0:
+                hours[default_idx] = np.random.choice(24, size=len(default_idx), p=instore_default_probs)
+        else:
+            hours[mask_instore] = np.random.choice(24, size=mask_instore.sum(), p=instore_default_probs)
+    hours = np.clip(hours, 0, 23).astype(np.uint8)
+    return hours
 
 chunk_size = 100_000
 current_buffer = []
 sales_id = 1
-
 f_path = f"{OUTPUT_DIR}/fact_sales.csv"
 if os.path.exists(f_path):
     os.remove(f_path)
 
-pd.DataFrame(columns=['salesid', 'datekey', 'productid', 'customerid', 'storeid', 'promoid', 
-                      'qty', 'unitprice', 'tax_rate', 'net', 'payment', 'channel', 
-                      'grossvalue', 'discountamount', 'taxamount', 'shipcost', 'isreturn', 
-                      'shipweight', 'discountapplied', 'returnreason', 'deliverydays']).to_csv(f_path, index=False)
+pd.DataFrame(columns=['salesid', 'datekey', 'productid', 'customerid', 'storeid', 'promoid',
+                      'qty', 'unitprice', 'tax_rate', 'net', 'payment', 'channel',
+                      'grossvalue', 'discountamount', 'taxamount', 'shipcost', 'isreturn',
+                      'shipweight', 'discountapplied', 'returnreason', 'deliverydays', 'hour']).to_csv(f_path, index=False)
 
 print(f"Writing to {f_path} in chunks of {chunk_size}...")
+store_type_map = store_df.set_index('storeid')['type'].to_dict()
 
-for day_idx in range(n):
+for day_idx in range(n_dates):
     target = daily_net_sales_target[day_idx]
     n_tr = daily_n_trans[day_idx]
     if n_tr == 0:
@@ -625,9 +662,8 @@ for day_idx in range(n):
     prod_choices = np.random.choice(product_ids_arr, n_tr)
     cust_choices = np.random.choice(customer_ids_arr, n_tr, p=cust_weights)
     store_choices = np.random.choice(store_ids_arr, n_tr, p=store_weights)
-    
-    promo_has = np.random.choice([0,1], n_tr, p=[0.65, 0.35])
-    promo_choices = np.where(promo_has == 1, np.random.choice(promo_ids_arr, n_tr, p=promo_weights), None)
+    promo_has = np.random.choice([0, 1], n_tr, p=[0.65, 0.35])
+    promo_choices = np.where(promo_has == 1, np.random.choice(promo_ids_arr, n_tr, p=promo_weights), 0)
 
     daily_price_mult = 1.0 + 0.02 * np.sin(2 * np.pi * day_idx / 365)
     unit_prices = product_unitprice_arr[prod_choices - 1] * daily_price_mult
@@ -642,23 +678,13 @@ for day_idx in range(n):
     net_sales = net_before_tax + tax
 
     total_raw = net_sales.sum()
-    if total_raw != 0:
-        scale = target / total_raw
-    else:
-        scale = 1.0
-
+    scale = target / total_raw if total_raw != 0 else 1.0
     gross = (gross * scale).round(2)
     net_sales = (net_sales * scale).round(2)
     tax = (tax * scale).round(2)
     disc_amount = (gross - (net_before_tax * scale)).round(2)
 
-    gross = gross.astype(float)
-    net_sales = net_sales.astype(float)
-    tax = tax.astype(float)
-    disc_amount = disc_amount.astype(float)
-
     discountapplied = (disc_amount != 0).astype(int)
-
     channel = np.random.choice(CHANNELS, n_tr, p=[0.5, 0.3, 0.15, 0.05])
     payment = np.random.choice(PAYMENT, n_tr)
     is_online = np.isin(channel, ['Online', 'Mobile App'])
@@ -672,20 +698,23 @@ for day_idx in range(n):
                   np.where(channel == 'Mobile App', 0.07,
                   np.where(channel == 'In-Store', 0.02, 0.04)))
     return_prob = return_prob * (1 + 0.2 * (delivery_days > 5))
-    is_return = np.random.random(n_tr) < return_prob
+    is_return = (np.random.random(n_tr) < return_prob).astype(int)
 
     shipcost = np.where(is_online, (weights * raw_qty * 0.5).round(2), 0.0)
-
-    return_reason = np.array([None] * n_tr, dtype=object)
-    mask_ret = is_return.astype(bool)
+    return_reason_arr = np.full(n_tr, "No return", dtype=object)
+    mask_ret = is_return == 1
     if mask_ret.any():
-        return_reason[mask_ret] = np.random.choice(RETURN_REASONS, mask_ret.sum())
+        return_reason_arr[mask_ret] = np.random.choice(RETURN_REASONS, mask_ret.sum())
 
-    gross = np.where(is_return, -gross, gross)
-    net_sales = np.where(is_return, -net_sales, net_sales)
-    disc_amount = np.where(is_return, -disc_amount, disc_amount)
-    tax = np.where(is_return, -tax, tax)
-    shipcost = np.where(is_return, 0.0, shipcost)
+    # Negate returns
+    gross = np.where(is_return == 1, -gross, gross)
+    net_sales = np.where(is_return == 1, -net_sales, net_sales)
+    disc_amount = np.where(is_return == 1, -disc_amount, disc_amount)
+    tax = np.where(is_return == 1, -tax, tax)
+    shipcost = np.where(is_return == 1, 0.0, shipcost)
+
+    store_types_for_rows = np.array([store_type_map.get(s, 'Supermarket') for s in store_choices])
+    hour_arr = generate_hours_vectorized(channel, store_types_for_rows)
 
     batch_df = pd.DataFrame({
         'salesid': np.arange(sales_id, sales_id + n_tr),
@@ -704,16 +733,15 @@ for day_idx in range(n):
         'discountamount': disc_amount,
         'taxamount': tax,
         'shipcost': shipcost,
-        'isreturn': is_return.astype(int),
+        'isreturn': is_return,
         'shipweight': (weights * raw_qty).round(2),
         'discountapplied': discountapplied,
-        'returnreason': return_reason,
-        'deliverydays': delivery_days
+        'returnreason': return_reason_arr,
+        'deliverydays': delivery_days,
+        'hour': hour_arr
     })
-
     current_buffer.append(batch_df)
     sales_id += n_tr
-
     total_buffered = sum(len(df) for df in current_buffer)
     if total_buffered >= chunk_size:
         pd.concat(current_buffer).to_csv(f_path, mode='a', header=False, index=False)
@@ -723,20 +751,17 @@ for day_idx in range(n):
 if current_buffer:
     pd.concat(current_buffer).to_csv(f_path, mode='a', header=False, index=False)
 
-print("\nVerifying generated CSV...")
-df_verify = pd.read_csv(f_path, nrows=5000)
-instore = df_verify[df_verify['channel'] == 'In-Store']
-if not instore.empty:
-    if (instore['deliverydays'] == 0).all():
-        print("✅ In-Store deliverydays = 0 – OK")
-    else:
-        print("❌ ERROR: Some In-Store rows have deliverydays != 0")
-        print(instore[['channel', 'deliverydays']].head(10))
-        raise SystemExit("Generator produced wrong deliverydays – fix the code!")
-else:
-    print("No In-Store rows in sample – check data")
+# Final validation
+print("\nValidating generated CSV...")
+df_check = pd.read_csv(f_path, nrows=5000)
+assert df_check['promoid'].isna().sum() == 0, "NULL promoid found!"
+assert df_check['returnreason'].isna().sum() == 0, "NULL returnreason found!"
+assert df_check['hour'].isna().sum() == 0, "NULL hour found!"
+instore_check = df_check[df_check['channel'] == 'In-Store']
+if not instore_check.empty:
+    assert (instore_check['deliverydays'] == 0).all(), "In-Store deliverydays not zero!"
 
 print(f"\n✅ All files created successfully. Total rows: {N_SALES:,}")
-print(f"Data generated from {START_DATE.date()} to {END_DATE.date()}")
-print("In-Store deliverydays = 0. No promotion = NULL.")
-# Last updated: 2026-05-19
+print(f"Data range: {START_DATE.date()} to {END_DATE.date()}")
+print("No NULL values. In-Store deliverydays=0. Hour column populated.")
+print(f"Script completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

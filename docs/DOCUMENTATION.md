@@ -1,166 +1,199 @@
-# Retail Analytics – Complete Documentation (Final)
+# 🛒 Retail Analytics – Complete Documentation (Final)
 
-**Project Overview** – The database models a multi‑channel retail chain (online, in‑store, mobile app, phone order) with **5 million sales transactions** generated from 2023‑01‑01 to the **current date** (dynamic). The data generator produces realistic trend evolution (soft landing, moderate growth, correction, final rally) with heteroscedastic noise. All percentages are stored as fractions (e.g., `0.15` = 15%).  
-- No dummy promotion is used – `promoid` in the fact table is `NULL` when there is no promotion (the promotion dimension contains only real promotions from 1 to 100).  
-- `deliverydays = 0` for all `In-Store` transactions (enforced in both generator and loader).  
-- The schema follows a star design with five dimensions and one fact table.
+**Project Overview** – The database models a multi‑channel retail chain (Online, In‑Store, Mobile App, Phone Order) with **5 million sales transactions** generated from **2023‑01‑01** to the **current date** (dynamic).  
+The data generator produces a **realistic trend**:  
+- *First half of the timeline*: slight decline from 60k to 50k (moderate drop)  
+- *Middle section*: stagnation (flat)  
+- *Last 30% of time*: strong rise from 50k to 95k (final growth)
 
-## Table Definitions
+All percentages are stored as fractions (e.g., `0.15` = 15%).  
+- **Promotions**: `promoid = 0` means “No Promotion” (a dedicated row exists in `dimpromotion`).  
+- **Returns**: `returnreason = 'No return'` for non‑return transactions (never `NULL`).  
+- **Delivery**: `deliverydays = 0` for all `In-Store` transactions.  
+- **Hour**: column `hour` (0‑23) is always populated, never `NULL`.  
 
-**dim_date**
+The schema follows a **star design** with five dimensions and one fact table.
+
+## 📁 Table Definitions
+
+### 📅 `dim_date`
 | Column | Type | Description |
 |--------|------|-------------|
-| datekey | INT | YYYYMMDD surrogate key |
+| datekey | INT | YYYYMMDD surrogate key (PK) |
 | fulldate | DATE | calendar date |
 | year | SMALLINT | year |
 | quarternumber | TINYINT | 1‑4 |
 | quartername | NCHAR(2) | Q1‑Q4 |
 | monthnumber | TINYINT | 1‑12 |
-| monthname | NVARCHAR(20) | January, … |
+| monthname | NVARCHAR(20) | January … |
 | weekdaynumber | TINYINT | 1=Monday .. 7=Sunday |
-| weekdayname | NVARCHAR(20) | Monday, … |
-| isweekend | BIT | 1 if weekend |
+| weekdayname | NVARCHAR(20) | Monday … |
+| isweekend | TINYINT | 1 if weekend |
 | yearmonth | NCHAR(7) | YYYY‑MM |
 | yearmonthnumber | INT | YYYYMM |
 | yearquarter | NVARCHAR(7) | YYYY‑QX |
 | yearquarternumber | INT | YYYY*10+Q |
 | yearweek | NVARCHAR(8) | YYYY‑Www |
 | yearweeknumber | INT | YYYY*100+week |
-| isholiday | BIT | 1 if Dec/Jan/July |
+| isholiday | TINYINT | 1 if Dec/Jan/July |
 
-**dim_customer**
+### 👤 `dim_customer`
 | Column | Type | Description |
 |--------|------|-------------|
 | customerid | INT | PK |
 | fullname | NVARCHAR(100) | first + last (suffix if duplicate) |
-| email | NVARCHAR(100) | unique email |
+| email | NVARCHAR(100) | unique |
 | age | TINYINT | 18‑75 |
-| gender | NVARCHAR(20) | Male/Female/Non‑binary |
+| gender | NVARCHAR(20) | Male / Female / Non‑binary |
 | city | NVARCHAR(50) | residence city |
-| tier | NVARCHAR(20) | Bronze/Silver/Gold/Platinum |
+| tier | NVARCHAR(20) | Bronze / Silver / Gold / Platinum |
 | points | INT | loyalty points |
-| isactive | BIT | 1 = active |
-| lang | NVARCHAR(10) | en,de,fr,es,pl,it |
-| totalspend | DECIMAL(18,2) | lifetime spend USD |
+| isactive | TINYINT | 1 = active |
+| lang | NVARCHAR(10) | en, de, fr, es, pl, it |
+| totalspend | DECIMAL(18,2) | lifetime spend (USD) |
 | regdate | DATE | registration date |
 | annualincome | DECIMAL(18,2) | USD |
-| incomebracket | NVARCHAR(20) | Low/Medium/High/Very High/Ultra High |
-| education | NVARCHAR(50) | High School/Bachelor/Master/PhD |
-| maritalstatus | NVARCHAR(20) | Single/Married/Divorced/Widowed |
+| incomebracket | NVARCHAR(20) | Low / Medium / High / Very High / Ultra High |
+| education | NVARCHAR(50) | High School / Bachelor / Master / PhD |
+| maritalstatus | NVARCHAR(20) | Single / Married / Divorced / Widowed |
 | childrencount | TINYINT | number of children |
 | loyaltysegment | NVARCHAR(20) | same as tier |
 | satisfactionscore | DECIMAL(5,1) | 1.0‑5.0 |
 | dayssincelastpurchase | INT | days since last transaction |
-| hassubscription | BIT | newsletter subscription |
-| preferredcontact | NVARCHAR(20) | Email/SMS/Phone/Mail |
+| hassubscription | TINYINT | newsletter subscription |
+| preferredcontact | NVARCHAR(20) | Email / SMS / Phone / Mail |
 | spendmultiplier | DECIMAL(10,3) | spending behaviour factor |
 
-**dim_product**
+### 🏷️ `dim_product`
 | Column | Type | Description |
 |--------|------|-------------|
 | productid | INT | PK |
 | name | NVARCHAR(150) | brand + adjective + noun + variant |
-| category | NVARCHAR(50) | Electronics/Home/Sports/Kids/Garden |
+| category | NVARCHAR(50) | Electronics / Home / Sports / Kids / Garden |
 | brand | NVARCHAR(50) | brand name |
-| unitcost | DECIMAL(18,2) | cost price USD |
+| unitcost | DECIMAL(18,2) | cost price (USD) |
 | unitprice | DECIMAL(18,2) | base selling price (before market multiplier) |
 | margin_pct | DECIMAL(5,4) | (price‑cost)/price |
 | weight | DECIMAL(10,2) | kg |
-| color | NVARCHAR(20) | Red/Blue/Green/Black/White/Gray/Silver/Gold |
-| material | NVARCHAR(50) | Plastic/Metal/Wood/Glass/Fabric |
+| color | NVARCHAR(20) | Red / Blue / Green / Black / White / Gray / Silver / Gold |
+| material | NVARCHAR(50) | Plastic / Metal / Wood / Glass / Fabric |
 | supplierid | INT | 1‑50 |
-| isactive | BIT | 1 = still sold |
+| isactive | TINYINT | 1 = still sold |
 | minstock | INT | reorder level |
 | tax_rate | DECIMAL(5,4) | 0.10 or 0.21 |
-| haswarranty | BIT | 1 = warranty offered |
-| ecofriendly | BIT | 1 = ecoscore > 100 |
+| haswarranty | TINYINT | 1 = warranty offered |
+| ecofriendly | TINYINT | 1 = ecoscore > 100 |
 | seasonalityfactor | DECIMAL(5,2) | demand multiplier (0.7‑1.3) |
 | warrantymonths | TINYINT | 0,12,24,36 |
 | ecoscore | TINYINT | 20‑200 |
 | releaseyear | SMALLINT | 2018‑2025 |
 | skucount | INT | number of variants |
-| isdiscontinued | BIT | 1 = discontinued |
+| isdiscontinued | TINYINT | 1 = discontinued |
 | productrating | DECIMAL(3,1) | 1.0‑5.0 |
 | stockstatus | NVARCHAR(20) | In Stock / Low Stock / Out of Stock |
 
-**dim_store**
+### 🏬 `dim_store`
 | Column | Type | Description |
 |--------|------|-------------|
 | storeid | INT | PK |
-| storename | NVARCHAR(150) | chain + city + suffix |
+| storename | NVARCHAR(150) | chain + city + suffix (unique) |
 | city | NVARCHAR(50) | location city |
-| type | NVARCHAR(50) | Supermarket/Hypermarket/Convenience/Department |
+| type | NVARCHAR(50) | Supermarket / Hypermarket / Convenience / Department |
 | staff | SMALLINT | number of employees |
 | sizem2 | INT | square meters |
-| hascafe | BIT | 1 = café present |
+| hascafe | TINYINT | 1 = café present |
 | openingyear | SMALLINT | year opened |
-| region | NVARCHAR(50) | North/South/East/West/Central |
+| region | NVARCHAR(50) | North / South / East / West / Central |
 | renovationyear | SMALLINT | last renovation (0 = never) |
 | parkingspots | SMALLINT | parking spaces |
 | storerating | DECIMAL(3,1) | 2.0‑5.0 |
-| hasdeliveryservice | BIT | 1 = delivery available |
+| hasdeliveryservice | TINYINT | 1 = delivery available |
 | floornumber | TINYINT | 1‑5 |
 | distancetocitycenterkm | DECIMAL(8,1) | km |
 | annualrentcost | DECIMAL(18,2) | USD |
 | storesizemultiplier | DECIMAL(10,3) | relative size (0.3‑4.0) |
 
-**dim_promotion**
+### 🎁 `dim_promotion`
 | Column | Type | Description |
 |--------|------|-------------|
-| promoid | INT | PK (only real promotions from 1 to 100; no dummy row) |
+| promoid | INT | PK (0 = "No Promotion", 1..100 = real promotions) |
 | promoname | NVARCHAR(150) | unique name |
 | discount_pct | DECIMAL(5,3) | percentage discount (fraction) |
 | discount_fixed | DECIMAL(10,2) | fixed USD discount |
-| type | NVARCHAR(50) | Percentage/Fixed Amount/BOGO/Free Shipping |
-| isactive | BIT | 1 = currently active |
+| type | NVARCHAR(50) | Percentage / Fixed Amount / BOGO / Free Shipping |
+| isactive | TINYINT | 1 = currently active |
 | minspend | INT | USD threshold |
-| channel | NVARCHAR(50) | Email/SMS/App/InStore/All/Online |
+| channel | NVARCHAR(50) | Email / SMS / App / InStore / All / Online |
 | budget | DECIMAL(18,2) | USD |
 | startdate | DATE | start date |
 | enddate | DATE | end date |
-| targetaudience | NVARCHAR(50) | All/New/Loyal/HighSpend |
+| targetaudience | NVARCHAR(50) | All / New / Loyal / HighSpend |
 | maxdiscountcap | DECIMAL(18,2) | max discount USD |
-| isstackable | BIT | 1 = can combine |
+| isstackable | TINYINT | 1 = can combine |
 | redemption_rate | DECIMAL(5,3) | target redemption rate (0.02‑0.35) |
-| coderequired | BIT | 1 = promo code needed |
+| coderequired | TINYINT | 1 = promo code needed |
 | promoupliftfactor | DECIMAL(6,3) | sales multiplier (1.0‑2.2) |
 
-**factsales**
+### 💰 `factsales`
 | Column | Type | Description |
 |--------|------|-------------|
 | salesid | BIGINT | PK |
-| datekey | INT | FK → dim_date |
-| productid | INT | FK → dim_product |
-| customerid | INT | FK → dim_customer |
-| storeid | INT | FK → dim_store |
-| promoid | INT | FK → dim_promotion (NULL = no promotion) |
+| datekey | INT | FK → `dim_date` |
+| productid | INT | FK → `dim_product` |
+| customerid | INT | FK → `dim_customer` |
+| storeid | INT | FK → `dim_store` |
+| promoid | INT | FK → `dim_promotion` (0 = no promotion) |
 | qty | TINYINT | 1‑10 |
-| unitprice | DECIMAL(18,2) | actual selling price (base * market index * seasonality) |
+| unitprice | DECIMAL(18,2) | actual selling price (base × market index × seasonality) |
 | tax_rate | DECIMAL(5,4) | 0.10 or 0.21 |
 | net | DECIMAL(18,2) | gross – discount + tax |
-| payment | NVARCHAR(20) | Card/Cash/Bank Transfer/Digital Wallet/PayPal |
-| channel | NVARCHAR(20) | Online/In‑Store/Mobile App/Phone Order |
-| grossvalue | DECIMAL(18,2) | qty * unitprice |
+| payment | NVARCHAR(20) | Card / Cash / Bank Transfer / Digital Wallet / PayPal |
+| channel | NVARCHAR(20) | Online / In‑Store / Mobile App / Phone Order |
+| grossvalue | DECIMAL(18,2) | qty × unitprice |
 | discountamount | DECIMAL(18,2) | total discount applied |
 | taxamount | DECIMAL(18,2) | tax paid |
 | shipcost | DECIMAL(18,2) | shipping cost (0 for in‑store) |
-| isreturn | BIT | 1 = return transaction |
-| shipweight | DECIMAL(10,2) | kg (qty * product weight) |
-| discountapplied | BIT | 1 = any discount used |
-| returnreason | NVARCHAR(50) | NULL if not a return |
-| deliverydays | TINYINT | 0 for in‑store, 1‑12 for online |
+| isreturn | TINYINT | 1 = return transaction |
+| shipweight | DECIMAL(10,2) | kg (qty × product weight) |
+| discountapplied | TINYINT | 1 = any discount used |
+| returnreason | NVARCHAR(50) | `'No return'` if `isreturn=0`; specific reason otherwise |
+| deliverydays | TINYINT | 0 for in‑store, 1‑10 for online/mobile/phone |
+| hour | TINYINT | hour of transaction (0‑23), never `NULL` |
 
-**All code examples (T‑SQL, DAX, Python) – copy everything below this line**
+## 📜 T‑SQL Queries (compatible with final schema)
 
 ```sql
+-- Total revenue (excl. returns)
 SELECT SUM(net) AS total_revenue FROM dbo.factsales WHERE isreturn = 0;
-SELECT SUM(f.qty * p.unitcost) AS total_cogs FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
-SELECT SUM(f.net - f.qty * p.unitcost) AS gross_profit FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
-SELECT (SUM(f.net - f.qty * p.unitcost) / NULLIF(SUM(f.net), 0)) AS gross_margin_pct FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
-SELECT SUM(net) / COUNT(DISTINCT salesid) AS avg_basket_value FROM dbo.factsales WHERE isreturn = 0;
-SELECT 1.0 * SUM(CASE WHEN isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*) AS return_rate FROM dbo.factsales;
-SELECT 1.0 * SUM(CASE WHEN discountapplied = 1 THEN 1 ELSE 0 END) / COUNT(*) AS discount_penetration FROM dbo.factsales WHERE isreturn = 0;
 
+-- Total COGS
+SELECT SUM(f.qty * p.unitcost) AS total_cogs 
+FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid 
+WHERE f.isreturn = 0;
+
+-- Gross profit
+SELECT SUM(f.net - f.qty * p.unitcost) AS gross_profit 
+FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid 
+WHERE f.isreturn = 0;
+
+-- Gross margin %
+SELECT (SUM(f.net - f.qty * p.unitcost) / NULLIF(SUM(f.net), 0)) AS gross_margin_pct 
+FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid 
+WHERE f.isreturn = 0;
+
+-- Average basket value
+SELECT SUM(net) / COUNT(DISTINCT salesid) AS avg_basket_value 
+FROM dbo.factsales WHERE isreturn = 0;
+
+-- Return rate
+SELECT 1.0 * SUM(CASE WHEN isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*) AS return_rate 
+FROM dbo.factsales;
+
+-- Discount penetration
+SELECT 1.0 * SUM(CASE WHEN discountapplied = 1 THEN 1 ELSE 0 END) / COUNT(*) AS discount_penetration 
+FROM dbo.factsales WHERE isreturn = 0;
+
+-- Monthly YoY revenue
 WITH monthly_revenue AS (
     SELECT YEAR(d.fulldate) AS yr, MONTH(d.fulldate) AS mn, SUM(f.net) AS revenue
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -172,6 +205,7 @@ SELECT curr.yr, curr.mn, curr.revenue, prev.revenue AS prev_year_revenue,
 FROM monthly_revenue curr LEFT JOIN monthly_revenue prev ON curr.mn = prev.mn AND curr.yr = prev.yr + 1
 ORDER BY curr.yr, curr.mn;
 
+-- 7-day and 30-day moving averages
 WITH daily_sales AS (
     SELECT d.fulldate, SUM(f.net) AS daily_total
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -183,11 +217,13 @@ SELECT fulldate, daily_total,
        AVG(daily_total) OVER (ORDER BY fulldate ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS ma_30days
 FROM daily_sales ORDER BY fulldate;
 
+-- Weekend vs weekday sales
 SELECT d.isweekend, AVG(f.net) AS avg_sales, SUM(f.net) AS total_sales, COUNT(*) AS tx_count
 FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
 WHERE f.isreturn = 0
 GROUP BY d.isweekend;
 
+-- Cohort retention (months since first purchase)
 WITH first_purchase AS (
     SELECT customerid, MIN(d.fulldate) AS first_date
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -200,6 +236,7 @@ WHERE f.isreturn = 0
 GROUP BY fp.first_date, DATEDIFF(month, fp.first_date, d.fulldate)
 ORDER BY fp.first_date, months_since_first;
 
+-- 90-day rolling 90th percentile
 WITH daily_sales AS (
     SELECT d.fulldate, SUM(f.net) AS daily_total
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -210,11 +247,13 @@ SELECT fulldate, daily_total,
        PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY daily_total) OVER (ORDER BY fulldate ROWS BETWEEN 89 PRECEDING AND CURRENT ROW) AS p90_90days
 FROM daily_sales;
 
+-- Revenue by customer tier
 SELECT c.tier, COUNT(DISTINCT c.customerid) AS cust_count, SUM(f.net) AS revenue, SUM(f.net)/COUNT(DISTINCT c.customerid) AS avg_clv
 FROM dbo.dimcustomer c JOIN dbo.factsales f ON c.customerid = f.customerid
 WHERE f.isreturn = 0
 GROUP BY c.tier;
 
+-- RFM segmentation (recency, frequency, monetary)
 WITH rfm_raw AS (
     SELECT customerid, DATEDIFF(day, MAX(d.fulldate), GETDATE()) AS recency, COUNT(*) AS frequency, SUM(net) AS monetary
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -231,17 +270,20 @@ SELECT customerid,
             ELSE 'Other' END AS segment
 FROM rfm_raw;
 
+-- Churn rate (no purchase in last 90 days)
 SELECT COUNT(DISTINCT customerid) AS churned_customers,
        100.0 * COUNT(DISTINCT customerid) / (SELECT COUNT(*) FROM dimcustomer) AS churn_rate_pct
 FROM dbo.dimcustomer c
 WHERE NOT EXISTS (SELECT 1 FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
                   WHERE f.customerid = c.customerid AND f.isreturn = 0 AND d.fulldate >= DATEADD(day, -90, GETDATE()));
 
+-- Average order value by tier and channel
 SELECT c.tier, f.channel, AVG(f.net) AS avg_order_value, COUNT(*) AS orders
 FROM dbo.factsales f JOIN dbo.dimcustomer c ON f.customerid = c.customerid
 WHERE f.isreturn = 0
 GROUP BY c.tier, f.channel ORDER BY c.tier, avg_order_value DESC;
 
+-- New vs returning customer revenue
 WITH customer_type AS (
     SELECT customerid, MIN(d.fulldate) AS first_date
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
@@ -254,21 +296,25 @@ FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey JOIN customer_t
 WHERE f.isreturn = 0
 GROUP BY CASE WHEN d.fulldate = ct.first_date THEN 'New' ELSE 'Returning' END;
 
+-- Top 10 products by revenue
 SELECT TOP 10 p.name, SUM(f.net) AS revenue, SUM(f.qty) AS units_sold
 FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0
 GROUP BY p.name ORDER BY revenue DESC;
 
+-- Top 10 lowest margin products (active)
 SELECT TOP 10 p.name, p.margin_pct, SUM(f.net) AS revenue
 FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0 AND p.isactive = 1
 GROUP BY p.name, p.margin_pct ORDER BY p.margin_pct ASC;
 
+-- Category revenue share
 SELECT p.category, SUM(f.net) AS revenue, 100.0 * SUM(f.net) / SUM(SUM(f.net)) OVER () AS revenue_pct
 FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0
 GROUP BY p.category ORDER BY revenue DESC;
 
+-- Product pair market basket analysis (top 20 by confidence)
 WITH pairs AS (
     SELECT f1.productid AS prod1, f2.productid AS prod2, COUNT(*) AS pair_count
     FROM dbo.factsales f1 JOIN dbo.factsales f2 ON f1.salesid = f2.salesid AND f1.productid < f2.productid
@@ -284,11 +330,13 @@ JOIN dbo.dimproduct p2 ON pp.prod2 = p2.productid
 WHERE pp.pair_count > 10
 ORDER BY confidence DESC;
 
+-- Price elasticity (correlation qty vs unitprice per category)
 SELECT p.category, CORR(f.qty, f.unitprice) AS price_elasticity_correlation
 FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0 AND f.qty>0 AND f.unitprice>0
 GROUP BY p.category;
 
+-- Store performance: revenue per square meter
 SELECT s.storename, s.city, s.type, SUM(f.net) AS revenue, SUM(f.net)/s.sizem2 AS revenue_per_m2,
        RANK() OVER (ORDER BY SUM(f.net)/s.sizem2 DESC) AS rank_per_m2
 FROM dbo.factsales f JOIN dbo.dimstore s ON f.storeid = s.storeid
@@ -296,11 +344,13 @@ WHERE f.isreturn = 0
 GROUP BY s.storeid, s.storename, s.city, s.type, s.sizem2
 ORDER BY revenue_per_m2 DESC;
 
+-- Revenue by region and store type
 SELECT s.region, s.type, SUM(f.net) AS revenue, COUNT(DISTINCT f.salesid) AS transactions
 FROM dbo.factsales f JOIN dbo.dimstore s ON f.storeid = s.storeid
 WHERE f.isreturn = 0
 GROUP BY s.region, s.type ORDER BY s.region, revenue DESC;
 
+-- Distance from city centre impact on basket value
 SELECT CASE WHEN s.distancetocitycenterkm < 2 THEN 'Core (<2km)'
             WHEN s.distancetocitycenterkm BETWEEN 2 AND 5 THEN 'Inner (2-5km)'
             WHEN s.distancetocitycenterkm BETWEEN 5 AND 10 THEN 'Outer (5-10km)'
@@ -313,11 +363,12 @@ GROUP BY CASE WHEN s.distancetocitycenterkm < 2 THEN 'Core (<2km)'
               WHEN s.distancetocitycenterkm BETWEEN 5 AND 10 THEN 'Outer (5-10km)'
               ELSE 'Suburban (>10km)' END;
 
+-- Promotion effect on quantity and price (per product)
 WITH promo_performance AS (
-    SELECT productid, CASE WHEN promoid IS NOT NULL THEN 'Promo' ELSE 'No Promo' END AS promo_flag,
+    SELECT productid, CASE WHEN promoid > 0 THEN 'Promo' ELSE 'No Promo' END AS promo_flag,
            AVG(qty) AS avg_qty, AVG(unitprice) AS avg_price, SUM(net) AS revenue
     FROM dbo.factsales WHERE isreturn = 0
-    GROUP BY productid, CASE WHEN promoid IS NOT NULL THEN 'Promo' ELSE 'No Promo' END
+    GROUP BY productid, CASE WHEN promoid > 0 THEN 'Promo' ELSE 'No Promo' END
 )
 SELECT p.name,
        MAX(CASE WHEN promo_flag='Promo' THEN avg_qty END) AS promo_qty,
@@ -329,20 +380,23 @@ HAVING MAX(CASE WHEN promo_flag='Promo' THEN avg_qty END) IS NOT NULL
    AND MAX(CASE WHEN promo_flag='No Promo' THEN avg_qty END) IS NOT NULL
 ORDER BY qty_uplift_pct DESC;
 
+-- Discount rate by channel
 SELECT channel, COUNT(*) AS total_tx, SUM(CASE WHEN discountapplied=1 THEN 1 ELSE 0 END) AS disc_tx,
        100.0 * SUM(CASE WHEN discountapplied=1 THEN 1 ELSE 0 END)/COUNT(*) AS discount_rate_pct
 FROM dbo.factsales WHERE isreturn = 0
 GROUP BY channel ORDER BY discount_rate_pct DESC;
 
+-- Average daily revenue with vs without promotion
 WITH store_daily AS (
     SELECT s.storeid, d.fulldate, SUM(f.net) AS daily_revenue,
-           MAX(CASE WHEN f.promoid IS NOT NULL THEN 1 ELSE 0 END) AS had_promo
+           MAX(CASE WHEN f.promoid > 0 THEN 1 ELSE 0 END) AS had_promo
     FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey JOIN dbo.dimstore s ON f.storeid = s.storeid
     WHERE f.isreturn = 0
     GROUP BY s.storeid, d.fulldate
 )
 SELECT had_promo, AVG(daily_revenue) AS avg_daily_revenue FROM store_daily GROUP BY had_promo;
 
+-- Anomaly detection (3 sigma rule) on weekly sales
 WITH weekly_stats AS (
     SELECT d.yearweek, SUM(f.net) AS weekly_sales,
            AVG(SUM(f.net)) OVER (ORDER BY d.yearweek ROWS BETWEEN 4 PRECEDING AND 4 FOLLOWING) AS ma_5weeks,
@@ -357,12 +411,14 @@ SELECT yearweek, weekly_sales, ma_5weeks, sd_5weeks,
             ELSE 'Normal' END AS anomaly_flag
 FROM weekly_stats ORDER BY yearweek;
 
+-- Return rate by category and average delivery days for returns
 SELECT p.category, COUNT(*) AS total_sold, SUM(CASE WHEN f.isreturn=1 THEN 1 ELSE 0 END) AS returned,
        100.0 * SUM(CASE WHEN f.isreturn=1 THEN 1 ELSE 0 END)/COUNT(*) AS return_rate_pct,
        AVG(CASE WHEN f.isreturn=1 THEN f.deliverydays ELSE NULL END) AS avg_delivery_days_returns
 FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid
 GROUP BY p.category ORDER BY return_rate_pct DESC;
 
+-- Orphan checks (all foreign keys must be valid)
 SELECT 'fact_sales' AS tbl, COUNT(*) AS orphan
 FROM dbo.factsales f LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey WHERE d.datekey IS NULL
 UNION ALL
@@ -376,50 +432,88 @@ SELECT 'fact_sales', COUNT(*)
 FROM dbo.factsales f LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid WHERE s.storeid IS NULL
 UNION ALL
 SELECT 'fact_sales', COUNT(*)
-FROM dbo.factsales f LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE f.promoid IS NOT NULL AND p.promoid IS NULL;
+FROM dbo.factsales f LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE p.promoid IS NULL;
+-- The last query works because promoid always has a value (0 or valid). If a promoid (e.g., 0 or 1..100) has no matching row in dimpromotion, then p.promoid will be NULL, revealing orphaned references.
 
--- DAX measures (all in one block)
+-- DAX
 
 Total Revenue = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[net])
+
 Total COGS = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[qty] * RELATED(dimproduct[unitcost]))
+
 Gross Profit = [Total Revenue] - [Total COGS]
+
 Gross Margin % = DIVIDE([Gross Profit], [Total Revenue], 0)
+
 Average Basket Value = DIVIDE([Total Revenue], DISTINCTCOUNT(FILTER(factsales, factsales[isreturn]=0), factsales[salesid]))
+
 Return Rate = DIVIDE(COUNTROWS(FILTER(factsales, factsales[isreturn]=1)), COUNTROWS(factsales), 0)
+
 Discount Penetration = DIVIDE(COUNTROWS(FILTER(factsales, factsales[discountapplied]=1 && factsales[isreturn]=0)), COUNTROWS(FILTER(factsales, factsales[isreturn]=0)), 0)
+
 Running Revenue = CALCULATE([Total Revenue], FILTER(ALL(dimdate), dimdate[fulldate] <= MAX(dimdate[fulldate])))
+
 YoY Revenue = VAR Curr = [Total Revenue] VAR Prev = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(dimdate[fulldate])) RETURN DIVIDE(Curr - Prev, Prev, 0)
+
 MoM Revenue = VAR Curr = [Total Revenue] VAR Prev = CALCULATE([Total Revenue], DATEADD(dimdate[fulldate], -1, MONTH)) RETURN DIVIDE(Curr - Prev, Prev, 0)
+
 7D Moving Avg = CALCULATE(AVERAGEX(DATESINPERIOD(dimdate[fulldate], LASTDATE(dimdate[fulldate]), -7, DAY), [Total Revenue]), ALL(dimdate))
+
 30D Moving Avg = CALCULATE(AVERAGEX(DATESINPERIOD(dimdate[fulldate], LASTDATE(dimdate[fulldate]), -30, DAY), [Total Revenue]), ALL(dimdate))
+
 YTD Revenue = TOTALYTD([Total Revenue], dimdate[fulldate])
+
 MTD Revenue = TOTALMTD([Total Revenue], dimdate[fulldate])
+
 Revenue SPLY = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(dimdate[fulldate]))
+
 YTD vs PYTD = [YTD Revenue] - CALCULATE([Total Revenue], DATESYTD(SAMEPERIODLASTYEAR(dimdate[fulldate])))
+
 Rolling 12M Revenue = CALCULATE([Total Revenue], DATESINPERIOD(dimdate[fulldate], LASTDATE(dimdate[fulldate]), -12, MONTH))
+
 Weekday Index = DIVIDE(AVERAGEX(VALUES(dimdate[weekdayname]), CALCULATE([Total Revenue], ALL(dimdate))), [Total Revenue], 0) * 100
+
 RFM Score = VAR R = RANKX(ALL(dimcustomer), CALCULATE(MAX(factsales[datekey])), , DESC, Dense) VAR F = RANKX(ALL(dimcustomer), COUNTROWS(factsales), , DESC, Dense) VAR M = RANKX(ALL(dimcustomer), [Total Revenue], , DESC, Dense) RETURN R & F & M
+
 Customer Segment = VAR Rec = RANKX(ALL(dimcustomer), CALCULATE(MAX(factsales[datekey])), , DESC, Dense) VAR Freq = RANKX(ALL(dimcustomer), COUNTROWS(factsales), , DESC, Dense) VAR Mon = RANKX(ALL(dimcustomer), [Total Revenue], , DESC, Dense) RETURN SWITCH(TRUE(), Rec<=2 && Freq<=2 && Mon<=2, "Champions", Rec<=3 && Freq<=3, "Loyal", Rec>=4 && Freq>=4, "At Risk", "Other")
+
 CLV = DIVIDE([Total Revenue], DISTINCTCOUNT(dimcustomer[customerid]))
+
 New Customer Revenue = VAR CurrentCust = VALUES(dimcustomer[customerid]) VAR NewCust = FILTER(CurrentCust, CALCULATE(MIN(factsales[datekey])) = MAX(dimdate[fulldate])) RETURN CALCULATE([Total Revenue], NewCust)
+
 Repeat Customer Revenue = [Total Revenue] - [New Customer Revenue]
+
 Repeat Purchase Rate = VAR Returning = COUNTROWS(FILTER(VALUES(dimcustomer[customerid]), CALCULATE(COUNTROWS(factsales)) > 1)) VAR AllCust = DISTINCTCOUNT(dimcustomer[customerid]) RETURN DIVIDE(Returning, AllCust, 0)
+
 Avg Frequency = DIVIDE(COUNTROWS(factsales), DISTINCTCOUNT(dimcustomer[customerid]), 0)
+
 Churn Rate = VAR Active = CALCULATETABLE(VALUES(dimcustomer[customerid]), DATESINPERIOD(dimdate[fulldate], LASTDATE(dimdate[fulldate]), -90, DAY)) VAR AllCust = VALUES(dimcustomer[customerid]) VAR Churned = COUNTROWS(EXCEPT(AllCust, Active)) RETURN DIVIDE(Churned, COUNTROWS(AllCust), 0)
+
 Top10 Products = TOPN(10, ALL(dimproduct[name]), [Total Revenue])
+
 Category Contribution = DIVIDE(SUMX(FILTER(factsales, RELATED(dimproduct[category]) = SELECTEDVALUE(dimproduct[category])), factsales[net]), [Total Revenue], 0)
+
 Avg Price by Category = AVERAGEX(VALUES(dimproduct[category]), CALCULATE(AVERAGE(factsales[unitprice])))
+
 Product Margin $ = SUMX(factsales, factsales[net] - factsales[qty] * RELATED(dimproduct[unitcost]))
+
 Product Margin % = DIVIDE([Product Margin $], [Total Revenue], 0)
+
 Sales Velocity = DIVIDE(SUM(factsales[qty]), DATEDIFF(MIN(dimdate[fulldate]), MAX(dimdate[fulldate]), DAY), 0)
+
 Revenue per m2 = DIVIDE([Total Revenue], SUM(dimstore[sizem2]), 0)
+
 High Rating Sales = CALCULATE([Total Revenue], dimstore[storerating] > 4)
+
 City Avg Basket = AVERAGEX(VALUES(dimstore[city]), CALCULATE([Average Basket Value], ALL(dimstore)))
+
 Promo Uplift = VAR Promo = CALCULATE([Total Revenue], factsales[promoid] > 0) VAR NonPromo = CALCULATE([Total Revenue], factsales[promoid] = 0) RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
+
 Avg Discount % = AVERAGEX(FILTER(factsales, factsales[discountapplied] = 1), factsales[discountamount] / factsales[grossvalue])
+
 Price-Qty Correlation = VAR Products = VALUES(dimproduct[productid]) VAR Covar = SUMX(Products, (AVERAGEX(RELATEDTABLE(factsales), factsales[unitprice]) - AVERAGE(factsales[unitprice])) * (AVERAGEX(RELATEDTABLE(factsales), factsales[qty]) - AVERAGE(factsales[qty]))) VAR StdPrice = STDEVX.P(Products, AVERAGEX(RELATEDTABLE(factsales), factsales[unitprice])) VAR StdQty = STDEVX.P(Products, AVERAGEX(RELATEDTABLE(factsales), factsales[qty])) RETURN DIVIDE(Covar, StdPrice * StdQty, 0)
 
--- Python verification script (complete)
+-- PYTHON
 
 import pandas as pd
 import numpy as np

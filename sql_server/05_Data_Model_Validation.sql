@@ -1,5 +1,6 @@
 -- =====================================================================
--- MODEL VALIDATION (compatible with final schema – no dimmanager)
+-- MODEL VALIDATION (compatible with final schema – promoid = 0 for no promotion)
+-- Last updated: 2026-05-21
 -- =====================================================================
 
 USE retailanalytics;
@@ -43,7 +44,7 @@ WHERE object_id = OBJECT_ID('dbo.factsales')
   AND name NOT IN ('salesid','datekey','productid','customerid','storeid','promoid',
                    'qty','unitprice','tax_rate','net','payment','channel','shipcost','isreturn',
                    'shipweight','discountapplied','returnreason','deliverydays',
-                   'grossvalue','discountamount','taxamount');
+                   'grossvalue','discountamount','taxamount','hour');   -- added 'hour' column
 
 -- 3. All five core dimension tables have a primary key
 INSERT INTO #model_checks
@@ -65,10 +66,10 @@ SELECT 'performance',
 FROM sys.indexes
 WHERE object_id = OBJECT_ID('dbo.factsales') AND type_desc = 'CLUSTERED COLUMNSTORE';
 
--- 5. Referential integrity: no orphan rows (NULL promoid allowed)
+-- 5. Referential integrity: no orphan rows (promoid = 0 is allowed as a valid reference)
 INSERT INTO #model_checks
 SELECT 'referential_integrity',
-       'no orphan rows in factsales (all foreign keys have matching dimension records, NULL promoid is allowed)',
+       'no orphan rows in factsales (all foreign keys have matching dimension records; promoid = 0 refers to dummy "No Promotion" row)',
        CASE WHEN orphan_count = 0 THEN 'OK' ELSE 'ISSUE' END,
        orphan_count
 FROM (
@@ -81,7 +82,7 @@ FROM (
     LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
     WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
        OR s.storeid IS NULL
-       OR (f.promoid IS NOT NULL AND pr.promoid IS NULL)
+       OR pr.promoid IS NULL   -- because promoid always has a value (0 or valid), NULL here means missing in dimpromotion
 ) AS orphan_check;
 
 -- Final report
@@ -94,8 +95,4 @@ DROP TABLE #model_checks;
 PRINT '================================================================================';
 PRINT 'MODEL VALIDATION COMPLETED.';
 PRINT '================================================================================';
-
--- =====================================================================
--- File generated on: 2025-05-19
--- =====================================================================
 GO
