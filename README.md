@@ -117,5 +117,8 @@ MIT © 2025 Kamil Soszka
 
 Last update: 2026-05-21 (final generator & loader – hour, promoid=0, returnreason, unique store names)
 
-<img width="1302" height="732" alt="retailanalytics_chart" src="https://github.com/user-attachments/assets/38f59f67-b6ea-43bf-92c6-c908b61b94cf" />
-<img width="1301" height="731" alt="managerportfolio_table" src="https://github.com/user-attachments/assets/1e8542c2-ed11-4096-b9bf-5b0d8062947e" />
+<img width="1301" height="731" alt="Revenue Trend" src="https://github.com/user-attachments/assets/4ab352b5-4801-4fb4-a08e-2905f7f279bb" />
+<img width="1297" height="727" alt="Payment Matrix" src="https://github.com/user-attachments/assets/8bae82f3-e982-4793-9c14-3d6484bb174d" />
+<img width="1301" height="731" alt="Monthly Revenue" src="https://github.com/user-attachments/assets/95bd5066-87cd-4758-9dcc-979de7d2f131" />
+
+
