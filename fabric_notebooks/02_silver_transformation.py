@@ -1,9 +1,12 @@
-# Notebook: 02_silver_transformation
+# -------------------------------------------------------------------
+# 02_silver_transformation
 # Clean, deduplicate, write to 02_silver_db, and ensure dummy promotion (promoid=0)
-# Compatible with final generator: hour column, returnreason='No return', promoid=0 dummy
+# Compatible with final generator: hour column, returnreason='No return'
+# Optimized: uses broadcast hints for small dimension tables, dynamic repartitioning
+# -------------------------------------------------------------------
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, current_timestamp, lit
+from pyspark.sql.functions import col, when, current_timestamp, lit, broadcast
 from pyspark.sql.types import DecimalType, ByteType
 
 spark = SparkSession.builder.getOrCreate()
@@ -18,16 +21,16 @@ existing = spark.sql(f"SHOW TABLES IN {silver_schema}").collect()
 for t in existing:
     spark.sql(f"DROP TABLE IF EXISTS {silver_schema}.{t.tableName}")
 
-bronze_tables = spark.sql(f"SHOW TABLES IN {bronze_schema}").collect()
+# Columns to cast to Decimal(18,2) or Decimal(5,4) as appropriate
+decimal_cols_high_prec = ["unitprice", "unitcost", "grossvalue", "discountamount", "taxamount", "shipcost", "annualrentcost", "budget", "maxdiscountcap"]
+decimal_cols_low_prec = ["margin_pct", "discount_pct", "redemption_rate", "promoupliftfactor", "tax_rate", "storesizemultiplier", "spendmultiplier"]
 
-# Define columns that should be cast to Decimal(18,2) (or appropriate precision)
-decimal_cols = ["unitprice", "unitcost", "grossvalue", "discountamount", "tax_rate", "margin_pct", "discount_pct", "promoupliftfactor", "redemption_rate"]
-
-for tbl in bronze_tables:
+for tbl in spark.sql(f"SHOW TABLES IN {bronze_schema}").collect():
     bronze_name = tbl.tableName
     if "manager" in bronze_name.lower():
         print(f"Skipping {bronze_name} (no manager table)")
         continue
+
     entity = bronze_name.replace("bronze_", "")
     silver_name = f"silver_{entity}"
     print(f"Processing {bronze_name} -> {silver_name}")
@@ -35,12 +38,12 @@ for tbl in bronze_tables:
     df = spark.table(f"{bronze_schema}.{bronze_name}")
 
     # Cast numeric columns (only if they exist)
-    for c in decimal_cols:
+    for c in decimal_cols_high_prec:
         if c in df.columns:
-            if c in ["margin_pct", "discount_pct", "redemption_rate", "promoupliftfactor"]:
-                df = df.withColumn(c, col(c).cast(DecimalType(5,4)))
-            else:
-                df = df.withColumn(c, col(c).cast(DecimalType(18,2)))
+            df = df.withColumn(c, col(c).cast(DecimalType(18,2)))
+    for c in decimal_cols_low_prec:
+        if c in df.columns:
+            df = df.withColumn(c, col(c).cast(DecimalType(10,4)))  # sufficient for 4 decimal places
 
     # Cast hour column to TINYINT (ByteType) if present
     if "hour" in df.columns:
@@ -57,13 +60,18 @@ for tbl in bronze_tables:
     # Add audit timestamp
     df = df.withColumn("_silver_processed_ts", current_timestamp())
 
-    # Repartition fact_sales by datekey (improves performance)
-    if "factsales" in entity and "datekey" in df.columns:
-        df = df.repartition(col("datekey"))
+    # Optimize write: repartition fact_sales by datekey, small tables can be coalesced
+    if "factsales" in entity:
+        if "datekey" in df.columns:
+            df = df.repartition(col("datekey"))   # 200 default partitions, good for 10M rows
+    else:
+        # Coalesce small dimension tables to fewer files (e.g., 1-4)
+        df = df.coalesce(4)
 
     # Write to silver
     df.write.format("delta").mode("overwrite").option("mergeSchema", "true").saveAsTable(f"{silver_schema}.{silver_name}")
-    print(f"Created {silver_schema}.{silver_name} with {df.count()} rows")
+
+    print(f"Created {silver_schema}.{silver_name} with {df.count():,} rows")
 
 # ----- Insert dummy promotion (promoid=0) using SQL to avoid type errors -----
 print("Checking for dummy promotion (promoid=0) in silver_dimpromotion...")

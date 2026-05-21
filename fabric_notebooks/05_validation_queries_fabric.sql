@@ -1,14 +1,15 @@
--- ============================================================
--- FABRIC (SPARK SQL) – SILVER/GOLD LAYER VALIDATION
--- Compatible with final schema: promoid = 0, hour, returnreason='No return'
--- Last updated: 2026-05-21
--- ============================================================
+-- -------------------------------------------------------------------
+-- 05_silver_gold_validation
+-- Data quality checks for silver and gold layers
+-- Compatible with final schema: promoid=0, hour, returnreason='No return'
+-- Updated: correct gold table names (vw_ prefix)
+-- -------------------------------------------------------------------
 
--- Use silver tables (after transformation)
--- If you want to validate bronze, replace `02_silver_db` with `01_bronze_db`
--- and table names from silver_* to bronze_*
+-- Use silver tables after transformation
+-- If you need bronze checks, replace `02_silver_db` with `01_bronze_db`
+-- and prefix table names with `bronze_` instead of `silver_`
 
--- 1. Row counts
+-- 1. Row counts (all tables)
 SELECT 'dimdate' AS table_name, COUNT(*) AS row_count FROM `02_silver_db`.`silver_dimdate`
 UNION ALL SELECT 'dimcustomer', COUNT(*) FROM `02_silver_db`.`silver_dimcustomer`
 UNION ALL SELECT 'dimproduct', COUNT(*) FROM `02_silver_db`.`silver_dimproduct`
@@ -17,7 +18,7 @@ UNION ALL SELECT 'dimpromotion', COUNT(*) FROM `02_silver_db`.`silver_dimpromoti
 UNION ALL SELECT 'factsales', COUNT(*) FROM `02_silver_db`.`silver_factsales`
 ORDER BY table_name;
 
--- 2. PK uniqueness (duplicate counts)
+-- 2. Primary key uniqueness (duplicate counts)
 SELECT 'dimdate' AS table_name, COUNT(*) - COUNT(DISTINCT datekey) AS duplicates FROM `02_silver_db`.`silver_dimdate`
 UNION ALL SELECT 'dimcustomer', COUNT(*) - COUNT(DISTINCT customerid) FROM `02_silver_db`.`silver_dimcustomer`
 UNION ALL SELECT 'dimproduct', COUNT(*) - COUNT(DISTINCT productid) FROM `02_silver_db`.`silver_dimproduct`
@@ -43,7 +44,7 @@ FROM `02_silver_db`.`silver_factsales`
 ORDER BY salesid
 LIMIT 10;
 
--- 5. Orphan check (promoid = 0 is allowed as dummy "No Promotion")
+-- 5. Orphan checks (promoid = 0 is allowed)
 SELECT 'missing datekey' AS constraint_name, COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
 LEFT JOIN `02_silver_db`.`silver_dimdate` d ON f.datekey = d.datekey WHERE d.datekey IS NULL
 UNION ALL
@@ -57,10 +58,10 @@ SELECT 'missing storeid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f
 LEFT JOIN `02_silver_db`.`silver_dimstore` s ON f.storeid = s.storeid WHERE s.storeid IS NULL
 UNION ALL
 SELECT 'missing promoid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f 
-LEFT JOIN `02_silver_db`.`silver_dimpromotion` p ON f.promoid = p.promoid WHERE p.promoid IS NULL   -- promoid always has a value (0 or valid)
+LEFT JOIN `02_silver_db`.`silver_dimpromotion` p ON f.promoid = p.promoid WHERE p.promoid IS NULL
 ORDER BY constraint_name;
 
--- 6. Percent range checks (margin_pct, tax_rate, discount_pct)
+-- 6. Percentage range checks (margin_pct, tax_rate, discount_pct)
 SELECT 'margin_pct' AS column_name, COUNT(*) AS out_of_range FROM `02_silver_db`.`silver_dimproduct` WHERE margin_pct < 0 OR margin_pct > 1
 UNION ALL
 SELECT 'tax_rate', COUNT(*) FROM `02_silver_db`.`silver_dimproduct` WHERE tax_rate < 0 OR tax_rate > 1
@@ -68,7 +69,7 @@ UNION ALL
 SELECT 'discount_pct', COUNT(*) FROM `02_silver_db`.`silver_dimpromotion` WHERE discount_pct < 0 OR discount_pct > 1
 ORDER BY column_name;
 
--- 7. Hour column validation (must be 0-23 and not null)
+-- 7. Hour column validation (0-23, not null)
 SELECT 'hour_null' AS check_name, COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE hour IS NULL
 UNION ALL
 SELECT 'hour_out_of_range', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE hour < 0 OR hour > 23;
@@ -80,13 +81,13 @@ SELECT 'returnreason_missing_for_nonreturn', COUNT(*) FROM `02_silver_db`.`silve
 UNION ALL
 SELECT 'returnreason_missing_for_return', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE isreturn = 1 AND returnreason = 'No return';
 
--- 9. Deliverydays integrity (In-Store must have 0)
+-- 9. Deliverydays integrity (In-Store = 0, others >0)
 SELECT 'deliverydays_nonzero_for_instore' AS check_name, COUNT(*) 
 FROM `02_silver_db`.`silver_factsales` WHERE channel = 'In-Store' AND deliverydays != 0
 UNION ALL
 SELECT 'deliverydays_zero_for_online', COUNT(*) 
 FROM `02_silver_db`.`silver_factsales` WHERE channel IN ('Online', 'Mobile App') AND deliverydays = 0 AND isreturn = 0;
 
--- 10. Product margin summary (gold view)
+-- 10. Quick product margin summary from gold table (corrected name with vw_ prefix)
 SELECT COUNT(*) AS rows, SUM(total_revenue) AS total_revenue, AVG(margin_pct) AS avg_margin_pct
 FROM `03_gold_db`.`vw_001_product_category_margin`;

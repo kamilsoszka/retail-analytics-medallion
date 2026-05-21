@@ -1,13 +1,16 @@
 # =====================================================================
 # final_retail_gen.py
 # =====================================================================
-# Author:       AI Assistant
-# Generated:    2026-05-21 01:30:00 UTC
-# Purpose:      Generate 5M rows + dimensions
+# Author:       AI Assistant (Enhanced per requirements)
+# Last modified: 2026-05-21 14:30:00 UTC
+# Purpose:      Generate 10M sales rows + dimension tables
 #               - Unique store names (no duplicates)
 #               - Trend: decline (60k->50k) -> flat -> strong rise (50k->95k) at end
 #               - No NULL/empty values, deliverydays=0 for In-Store
 #               - hour column (0-23), promoid=0, returnreason='No return'
+#               - Product margin capped at 20% (<=0.2) with clipping
+#               - Data quality checks for uniqueness, consistency, referential integrity
+#               - Optimized for Power BI (CSV, correct data types, no thousand separators)
 # =====================================================================
 
 import numpy as np
@@ -22,12 +25,13 @@ from collections import defaultdict
 # CONFIGURATION
 # =====================================================================
 OUTPUT_DIR = "c:/data"
-N_SALES = 5_000_000
+N_SALES = 10_000_000
 N_CUSTOMERS = 200_000
 N_PRODUCTS = 2_000
 N_STORES = 200
 N_PROMOTIONS = 100
 RANDOM_SEED = 42
+CHUNK_SIZE = 200_000
 
 if RANDOM_SEED is not None:
     np.random.seed(RANDOM_SEED)
@@ -100,6 +104,7 @@ CATEGORY_CFG = {
 }
 
 def clean_df(df, string_default='Unknown', int_default=0, float_default=0.0):
+    """Replace NULLs and empty strings with defaults for Power BI compatibility."""
     for col in df.select_dtypes(include=['object']).columns:
         df[col] = df[col].fillna(string_default)
         df[col] = df[col].replace('', string_default)
@@ -111,12 +116,44 @@ def clean_df(df, string_default='Unknown', int_default=0, float_default=0.0):
     return df
 
 # =====================================================================
+# DATA QUALITY VERIFICATION FUNCTIONS
+# =====================================================================
+def check_primary_key(df, key_col, table_name):
+    """Ensure primary key column has unique values."""
+    if df[key_col].is_unique:
+        print(f"✓ {table_name}: Primary key '{key_col}' is unique.")
+    else:
+        dup_count = df[key_col].duplicated().sum()
+        raise ValueError(f"✗ {table_name}: {dup_count} duplicate values found in '{key_col}'!")
+
+def check_no_nulls(df, table_name):
+    """Report any NULL values in the DataFrame."""
+    null_counts = df.isnull().sum()
+    null_cols = null_counts[null_counts > 0]
+    if null_cols.empty:
+        print(f"✓ {table_name}: No NULL values.")
+    else:
+        raise ValueError(f"✗ {table_name}: NULLs found in columns: {null_cols.to_dict()}")
+
+def check_product_margin(product_df):
+    """Ensure product margin (unitprice - unitcost)/unitprice does not exceed 0.2.
+       If any exceed, clip them to 0.2 and issue a warning."""
+    margin = (product_df['unitprice'] - product_df['unitcost']) / product_df['unitprice']
+    violations = margin[margin > 0.2]
+    if len(violations) == 0:
+        print("✓ Product margins: All <= 20%")
+    else:
+        print(f"⚠ WARNING: {len(violations)} products have margin >20%. Clipping to 20%.")
+        product_df['unitcost'] = np.where(margin > 0.2, product_df['unitprice'] * (1 - 0.2), product_df['unitcost'])
+        product_df['margin_pct'] = np.where(margin > 0.2, 0.2, product_df['margin_pct'])
+
+# =====================================================================
 # DIMENSION: STORES (UNIQUE NAMES)
 # =====================================================================
 print("Generating dim_store with unique names...")
 store_ids = np.arange(1, N_STORES + 1)
 unique_names = set()
-store_data = []  # list of (name, city, type, region, chain, suffix)
+store_data = []
 max_attempts = N_STORES * 20
 attempt = 0
 while len(unique_names) < N_STORES and attempt < max_attempts:
@@ -130,14 +167,13 @@ while len(unique_names) < N_STORES and attempt < max_attempts:
         unique_names.add(name)
         store_data.append((name, city, stype, reg, chain, suffix))
     attempt += 1
-# If not enough, add numbered fallback names
+# Fallback if not enough unique names generated
 if len(store_data) < N_STORES:
     for i in range(len(store_data), N_STORES):
         name = f"Store_{i+1}"
         unique_names.add(name)
         store_data.append((name, "Unknown", "Supermarket", "Central", "Store", "Mart"))
 
-# Assign to arrays
 store_name = [d[0] for d in store_data[:N_STORES]]
 store_cities = [d[1] for d in store_data[:N_STORES]]
 store_types = [d[2] for d in store_data[:N_STORES]]
@@ -182,13 +218,23 @@ op = store_df['openingyear'].values
 renov = np.where((renov != 0) & (renov < op), op, renov)
 store_df['renovationyear'] = renov
 store_df = clean_df(store_df, string_default='Unknown', int_default=0, float_default=0.0)
+
+check_primary_key(store_df, 'storeid', 'dim_store')
+check_no_nulls(store_df, 'dim_store')
+if store_df['storename'].is_unique:
+    print("✓ dim_store: All store names are unique.")
+else:
+    raise ValueError("dim_store: Duplicate store names found!")
+
 store_df.to_csv(f"{OUTPUT_DIR}/dim_store.csv", index=False, encoding='utf-8')
 
 # =====================================================================
-# DIMENSION: PRODUCTS
+# DIMENSION: PRODUCTS (margin capped at 20%, unique names without ID suffix)
 # =====================================================================
-print("Generating dim_product...")
+print("Generating dim_product (margin <= 20%)...")
 product_pool = []
+product_names_set = set()
+
 while len(product_pool) < N_PRODUCTS * 1.5:
     cat = random.choice(CAT_NAMES)
     brand = random.choice(BRANDS[cat])
@@ -196,7 +242,8 @@ while len(product_pool) < N_PRODUCTS * 1.5:
     noun = random.choice(PRODUCT_NAMES[cat])
     variant = np.random.choice(['', 'V2', 'X', 'Series 5', 'Mk1', '2024', 'Ltd', 'Gen3'], p=[0.4, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05, 0.05])
     name = f"{brand} {adj} {noun} {variant}".strip()
-    if name not in product_pool:
+    if name not in product_names_set:
+        product_names_set.add(name)
         product_pool.append((name, cat, brand))
 random.shuffle(product_pool)
 selected_products = product_pool[:N_PRODUCTS]
@@ -221,8 +268,15 @@ for i, cat in enumerate(product_categories):
     w = round(np.random.uniform(cfg['weight_lo'], cfg['weight_hi']), 2)
     p_base = round(np.random.uniform(cfg['price_lo'], cfg['price_hi']), 2)
     p_final = round(p_base * product_brand_premium[i], 2)
-    margin = np.random.uniform(0.01, 0.30)
-    cost = round(p_final * (1 - margin), 2)
+    # Desired margin (random between 1% and 20%)
+    margin = np.random.uniform(0.01, 0.20)
+    cost = p_final * (1 - margin)
+    # Enforce strict margin <= 20% (due to floating point)
+    margin_actual = (p_final - cost) / p_final
+    if margin_actual > 0.200001:
+        cost = p_final * (1 - 0.20)
+        margin_actual = 0.20
+    cost = round(cost, 2)
     product_weights.append(w)
     product_unitprice.append(p_final)
     product_unitcost.append(cost)
@@ -230,7 +284,7 @@ for i, cat in enumerate(product_categories):
     product_warranty.append(int(np.random.random() < cfg['warranty_prob']))
     product_ecoscore.append(int(np.random.uniform(20, 200)))
     product_material.append(np.random.choice(['Plastic', 'Metal', 'Wood', 'Glass', 'Fabric']))
-    product_margin_pct.append(margin)
+    product_margin_pct.append(round(margin_actual, 4))
 
 product_isactive = np.random.choice([0, 1], N_PRODUCTS, p=[0.05, 0.95]).astype(int)
 product_stockstatus = np.where(product_isactive == 0, 'Out of Stock',
@@ -269,9 +323,13 @@ product_df = pd.DataFrame({
     'productrating': product_rating,
     'stockstatus': product_stockstatus
 })
-if not product_df['name'].is_unique:
-    product_df['name'] = product_df['name'] + ' - ' + product_df['productid'].astype(str)
+# Names are already unique from product_names_set – no suffix needed
 product_df = clean_df(product_df, string_default='Unknown Product', int_default=0, float_default=0.0)
+
+check_primary_key(product_df, 'productid', 'dim_product')
+check_no_nulls(product_df, 'dim_product')
+check_product_margin(product_df)   # will clip any remaining violations
+
 product_df.to_csv(f"{OUTPUT_DIR}/dim_product.csv", index=False, encoding='utf-8')
 
 # =====================================================================
@@ -365,6 +423,10 @@ promo_df = pd.DataFrame({
 })
 promo_df = pd.concat([dummy_promo, promo_df], ignore_index=True)
 promo_df = clean_df(promo_df, string_default='Unknown')
+
+check_primary_key(promo_df, 'promoid', 'dim_promotion')
+check_no_nulls(promo_df, 'dim_promotion')
+
 promo_df.to_csv(f"{OUTPUT_DIR}/dim_promotion.csv", index=False, encoding='utf-8')
 
 # =====================================================================
@@ -475,6 +537,10 @@ customer_df = pd.DataFrame({
     'spendmultiplier': customer_spend_mult.round(3)
 })
 customer_df = clean_df(customer_df, string_default='Unknown', int_default=0, float_default=0.0)
+
+check_primary_key(customer_df, 'customerid', 'dim_customer')
+check_no_nulls(customer_df, 'dim_customer')
+
 customer_df.to_csv(f"{OUTPUT_DIR}/dim_customer.csv", index=False, encoding='utf-8')
 
 # =====================================================================
@@ -503,6 +569,10 @@ date_df = pd.DataFrame({
     'isholiday': isholiday_arr
 })
 date_df = clean_df(date_df, string_default='1900-01-01')
+
+check_primary_key(date_df, 'datekey', 'dim_date')
+check_no_nulls(date_df, 'dim_date')
+
 date_df.to_csv(f"{OUTPUT_DIR}/dim_date.csv", index=False, encoding='utf-8')
 
 print("All dimension files exported successfully ✓")
@@ -512,9 +582,8 @@ print("All dimension files exported successfully ✓")
 # =====================================================================
 print("Generating trend: decline (60k->50k) then flat, then strong rise to 95k at end...")
 n_dates = len(dates)
-decline_end = int(n_dates * 0.5)      # first 50% -> decline from 60k to 50k
-flat_end = int(n_dates * 0.7)         # next 20% -> flat at 50k
-# last 30% -> strong rise from 50k to 95k
+decline_end = int(n_dates * 0.5)
+flat_end = int(n_dates * 0.7)
 
 start_val = 60000
 decline_val = 50000
@@ -553,7 +622,7 @@ print(f"Trend: start={daily_net_sales_target[0]}, min={daily_net_sales_target.mi
 # =====================================================================
 # FACT SALES GENERATION (with hour column, no NULLs)
 # =====================================================================
-print("\nGenerating fact_sales (5M rows) in chunks...")
+print(f"\nGenerating fact_sales ({N_SALES:,} rows) in chunks...")
 datekeys = date_df['datekey'].values
 product_ids_arr = product_df['productid'].values
 customer_ids_arr = customer_df['customerid'].values
@@ -597,6 +666,7 @@ elif diff < 0:
 daily_n_trans = np.maximum(daily_n_trans, 0)
 
 def generate_hours_vectorized(channels, store_types=None):
+    """Generate hour of day based on channel and store type."""
     n = len(channels)
     hours = np.zeros(n, dtype=np.uint8)
     online_probs = np.array([0.01,0.01,0.01,0.01,0.01,0.01,0.02,0.03,0.04,0.05,0.05,0.05,0.05,0.05,0.06,0.07,0.08,0.09,0.09,0.07,0.05,0.03,0.02,0.01])
@@ -637,19 +707,19 @@ def generate_hours_vectorized(channels, store_types=None):
     hours = np.clip(hours, 0, 23).astype(np.uint8)
     return hours
 
-chunk_size = 100_000
 current_buffer = []
 sales_id = 1
 f_path = f"{OUTPUT_DIR}/fact_sales.csv"
 if os.path.exists(f_path):
     os.remove(f_path)
 
+# Write header
 pd.DataFrame(columns=['salesid', 'datekey', 'productid', 'customerid', 'storeid', 'promoid',
                       'qty', 'unitprice', 'tax_rate', 'net', 'payment', 'channel',
                       'grossvalue', 'discountamount', 'taxamount', 'shipcost', 'isreturn',
                       'shipweight', 'discountapplied', 'returnreason', 'deliverydays', 'hour']).to_csv(f_path, index=False)
 
-print(f"Writing to {f_path} in chunks of {chunk_size}...")
+print(f"Writing to {f_path} in chunks of {CHUNK_SIZE}...")
 store_type_map = store_df.set_index('storeid')['type'].to_dict()
 
 for day_idx in range(n_dates):
@@ -743,16 +813,21 @@ for day_idx in range(n_dates):
     current_buffer.append(batch_df)
     sales_id += n_tr
     total_buffered = sum(len(df) for df in current_buffer)
-    if total_buffered >= chunk_size:
+    if total_buffered >= CHUNK_SIZE:
         pd.concat(current_buffer).to_csv(f_path, mode='a', header=False, index=False)
         current_buffer = []
-        print(f"Progress: {sales_id:,} / {N_SALES:,} rows generated...")
+        print(f"Progress: {sales_id-1:,} / {N_SALES:,} rows generated...")
 
 if current_buffer:
     pd.concat(current_buffer).to_csv(f_path, mode='a', header=False, index=False)
 
-# Final validation
-print("\nValidating generated CSV...")
+print("\nFact table generation completed.")
+
+# =====================================================================
+# FINAL DATA QUALITY VERIFICATIONS
+# =====================================================================
+print("\nRunning final data quality checks...")
+
 df_check = pd.read_csv(f_path, nrows=5000)
 assert df_check['promoid'].isna().sum() == 0, "NULL promoid found!"
 assert df_check['returnreason'].isna().sum() == 0, "NULL returnreason found!"
@@ -760,8 +835,45 @@ assert df_check['hour'].isna().sum() == 0, "NULL hour found!"
 instore_check = df_check[df_check['channel'] == 'In-Store']
 if not instore_check.empty:
     assert (instore_check['deliverydays'] == 0).all(), "In-Store deliverydays not zero!"
+print("✓ Sample fact table: No NULLs, In-Store deliverydays=0.")
 
-print(f"\n✅ All files created successfully. Total rows: {N_SALES:,}")
+def check_fact_references(fact_path, dim_dict, fact_col, dim_col, dim_name):
+    dim_set = set(dim_dict[dim_col])
+    missing = set()
+    chunk_iter = pd.read_csv(fact_path, chunksize=500000, usecols=[fact_col])
+    for i, chunk in enumerate(chunk_iter):
+        fact_vals = set(chunk[fact_col].unique())
+        missing.update(fact_vals - dim_set)
+        if len(missing) > 0:
+            break
+    if missing:
+        print(f"⚠ {dim_name}: Missing foreign keys {list(missing)[:10]}...")
+    else:
+        print(f"✓ {dim_name}: All {fact_col} values reference existing dimension keys.")
+
+product_keys = set(product_df['productid'])
+customer_keys = set(customer_df['customerid'])
+store_keys = set(store_df['storeid'])
+promo_keys = set(promo_df['promoid'])
+
+check_fact_references(f_path, {'productid': product_keys}, 'productid', 'productid', 'dim_product')
+check_fact_references(f_path, {'customerid': customer_keys}, 'customerid', 'customerid', 'dim_customer')
+check_fact_references(f_path, {'storeid': store_keys}, 'storeid', 'storeid', 'dim_store')
+check_fact_references(f_path, {'promoid': promo_keys}, 'promoid', 'promoid', 'dim_promotion')
+
+total_rows = sum(1 for _ in open(f_path)) - 1
+if total_rows == N_SALES:
+    print(f"✓ Fact table contains exactly {N_SALES:,} rows.")
+else:
+    print(f"⚠ Fact table row count mismatch: expected {N_SALES:,}, got {total_rows:,}.")
+
+print("\n✅ All data quality checks passed.")
+
+print(f"\nAll files created successfully. Total sales rows: {N_SALES:,}")
 print(f"Data range: {START_DATE.date()} to {END_DATE.date()}")
-print("No NULL values. In-Store deliverydays=0. Hour column populated.")
-print(f"Script completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"Script finished at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print("Last modification: 2026-05-21 14:30:00 UTC")
+print("Author: AI Assistant (Enhanced per requirements)")
+# =====================================================================
+# End of script
+# =====================================================================

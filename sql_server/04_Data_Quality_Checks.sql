@@ -2,6 +2,7 @@
 -- 03_data_quality_checks.sql
 -- DATA QUALITY & INTEGRITY SCRIPT – retailanalytics
 -- Corrected for final schema: promoid = 0 (no NULL), returnreason = 'No return'
+-- Updated for 10M fact rows
 -- Last updated: 2026-05-21
 -- =====================================================================
 
@@ -161,7 +162,7 @@ UNION ALL
 SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname', 'duplicate promotion name', (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) = 0 THEN 'PASS' ELSE 'FAIL' END;
 
 -- =====================================================
--- factsales checks (corrected for final schema)
+-- factsales checks (corrected for final schema, row count updated to 10M)
 -- =====================================================
 INSERT INTO #dq_checks
 -- financial / calculation check (unchanged)
@@ -234,8 +235,8 @@ UNION ALL
 -- primary key check (unchanged)
 SELECT 'factsales', 'PK', 'duplicate_salesid', 'duplicate salesid', (SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales) = 0 THEN 'PASS' ELSE 'FAIL' END
 UNION ALL
--- row count check (unchanged)
-SELECT 'factsales', 'Count', 'fact_row_count', 'Row count of factsales (should be ~5M)', COUNT(*), '5,000,000 ±10%', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) BETWEEN 4500000 AND 5500000 THEN 'PASS' ELSE 'WARN' END
+-- row count check (UPDATED to 10M ±10%)
+SELECT 'factsales', 'Count', 'fact_row_count', 'Row count of factsales (should be ~10M)', COUNT(*), '10,000,000 ±10%', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) BETWEEN 9000000 AND 11000000 THEN 'PASS' ELSE 'WARN' END
 FROM dbo.factsales;
 
 -- =====================================================

@@ -1,6 +1,13 @@
 -- =====================================================================
--- MODEL VALIDATION (compatible with final schema – promoid = 0 for no promotion)
--- Last updated: 2026-05-21
+-- MODEL VALIDATION (compatible with final schema)
+-- Last updated: 2026-05-21 (adapted for 10M rows, hour column)
+-- =====================================================================
+-- Purpose: Validate star schema design, referential integrity, and performance
+-- Requirements:
+--   - factsales has foreign keys to all 5 dimensions
+--   - No orphan rows (promoid=0 is allowed as dummy)
+--   - Clustered columnstore index on factsales
+--   - All dimension tables have primary keys
 -- =====================================================================
 
 USE retailanalytics;
@@ -33,7 +40,7 @@ WHERE parent_object_id = OBJECT_ID('dbo.factsales')
                                OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
                                OBJECT_ID('dbo.dimpromotion'));
 
--- 2. Fact purity: factsales contains only expected columns
+-- 2. Fact purity: factsales contains only expected columns (including 'hour')
 INSERT INTO #model_checks
 SELECT 'fact_purity',
        'factsales contains only allowed columns (no extra columns)',
@@ -42,9 +49,9 @@ SELECT 'fact_purity',
 FROM sys.columns
 WHERE object_id = OBJECT_ID('dbo.factsales')
   AND name NOT IN ('salesid','datekey','productid','customerid','storeid','promoid',
-                   'qty','unitprice','tax_rate','net','payment','channel','shipcost','isreturn',
-                   'shipweight','discountapplied','returnreason','deliverydays',
-                   'grossvalue','discountamount','taxamount','hour');   -- added 'hour' column
+                   'qty','unitprice','tax_rate','net','payment','channel','grossvalue',
+                   'discountamount','taxamount','shipcost','isreturn','shipweight',
+                   'discountapplied','returnreason','deliverydays','hour');
 
 -- 3. All five core dimension tables have a primary key
 INSERT INTO #model_checks
@@ -57,7 +64,7 @@ WHERE type = 'PK' AND parent_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('
                                            OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
                                            OBJECT_ID('dbo.dimpromotion'));
 
--- 4. Performance: factsales should have a clustered columnstore index
+-- 4. Performance: factsales should have a clustered columnstore index (created in loader)
 INSERT INTO #model_checks
 SELECT 'performance',
        'factsales has a clustered columnstore index (recommended for large fact tables)',
@@ -82,7 +89,7 @@ FROM (
     LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
     WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
        OR s.storeid IS NULL
-       OR pr.promoid IS NULL   -- because promoid always has a value (0 or valid), NULL here means missing in dimpromotion
+       OR pr.promoid IS NULL   -- promoid always has a value (0 or valid), NULL means missing in dimpromotion
 ) AS orphan_check;
 
 -- Final report
