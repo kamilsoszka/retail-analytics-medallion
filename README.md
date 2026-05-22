@@ -73,3 +73,9 @@ D. Power BI reporting
 
 ## License
 MIT – free to use, modify, and distribute.
+
+<img width="1301" height="731" alt="Revenue Trend" src="https://github.com/user-attachments/assets/bb23b6c3-0d5a-4123-8c57-2894939db6c5" />
+<img width="1297" height="727" alt="Payment Matrix" src="https://github.com/user-attachments/assets/03127137-b303-4257-80d7-99ae06157587" />
+<img width="1301" height="731" alt="Monthly Revenue" src="https://github.com/user-attachments/assets/e96770d1-9f3f-481d-9cc6-75898f2ecae4" />
+
+
