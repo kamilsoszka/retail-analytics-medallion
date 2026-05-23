@@ -1,9 +1,10 @@
-# -------------------------------------------------------------------
+# ============================================================================
 # 04_optimization.py
-# Author: DataGen AI
-# Date: 2026-05-23
-# Purpose: Compaction and Z-ordering of Delta tables across all layers.
-# -------------------------------------------------------------------
+# ============================================================================
+# Author:       DataGen AI
+# Date:         2026-05-23
+# Description:  Compaction & Z‑ordering of Delta tables across all layers.
+# ============================================================================
 
 from delta.tables import DeltaTable
 from pyspark.sql import SparkSession
@@ -11,7 +12,7 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.getOrCreate()
 spark.conf.set("spark.sql.adaptive.enabled", "true")
 
-RUN_VACUUM = False   # set True to remove old files >7 days
+RUN_VACUUM = False
 
 def zorder_columns(table_name):
     name = table_name.lower()
@@ -53,3 +54,6 @@ for schema in ["`01_bronze_db`", "`02_silver_db`", "`03_gold_db`"]:
             print(f"  Error: {e}")
 
 print("Optimization completed.")
+# ============================================================================
+# End of 04_optimization.py
+# ============================================================================

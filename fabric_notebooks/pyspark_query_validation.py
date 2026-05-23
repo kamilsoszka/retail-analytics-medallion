@@ -1,9 +1,12 @@
-# -------------------------------------------------------------------
+# ============================================================================
 # 06_analysis_queries.py
-# Author: DataGen AI
-# Date: 2026-05-23
-# Purpose: Set of analytical queries on silver data for quick insights.
-# -------------------------------------------------------------------
+# ============================================================================
+# Author:       DataGen AI
+# Date:         2026-05-23
+# Description:  Analytical queries on silver data for quick insights.
+#               All _pct columns are fractions (0.0–1.0).
+#               Results are multiplied by 100 for display as percentages.
+# ============================================================================
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum as spark_sum, avg, desc, substring, when, min, countDistinct
@@ -102,3 +105,6 @@ fact.join(store, "storeid").filter(col("isreturn") == 0).groupBy("storename") \
     .agg(spark_sum("net").alias("revenue")).orderBy(desc("revenue")).limit(10).show(10, False)
 
 print("\nAnalysis completed.")
+# ============================================================================
+# End of 06_analysis_queries.py
+# ============================================================================

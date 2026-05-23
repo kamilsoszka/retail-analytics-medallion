@@ -1,11 +1,12 @@
--- =====================================================================
+-- ============================================================================
 -- 03_data_quality_checks.sql
--- =====================================================================
--- Author:  AI Assistant
--- Created: 2026-05-23
--- Updated: 2026-05-23 (margin cap 25%, discount_pct percent, qty limit raised)
--- Purpose: Comprehensive data quality checks for retailanalytics database
--- =====================================================================
+-- ============================================================================
+-- Author:       DataGen AI
+-- Date:         2026-05-23
+-- Description:  Comprehensive data quality checks for retailanalytics.
+--               All percentage columns are fractions (0.0–1.0).
+--               Updated: negative margins allowed up to -0.10.
+-- ============================================================================
 
 USE retailanalytics;
 GO
@@ -61,7 +62,7 @@ SELECT 'dimdate', 'Range', 'date_coverage_end', 'Maximum date in dimdate (should
 FROM dbo.dimdate;
 
 -- =====================================================
--- dimcustomer (unchanged, gender check passes with 'Non-binary')
+-- dimcustomer (gender now only Male/Female)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimcustomer', 'Null', 'customerid_null', 'customerid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -72,8 +73,8 @@ UNION ALL
 SELECT 'dimcustomer', 'Range', 'age_out_of_bounds', 'age < 18 or > 75', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimcustomer WHERE age < 18 OR age > 75
 UNION ALL
-SELECT 'dimcustomer', 'Value', 'invalid_gender', 'gender not valid', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE gender NOT IN ('Male','Female','Non-binary')
+SELECT 'dimcustomer', 'Value', 'invalid_gender', 'gender not Male/Female', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimcustomer WHERE gender NOT IN ('Male','Female')
 UNION ALL
 SELECT 'dimcustomer', 'Value', 'invalid_tier', 'tier not valid', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimcustomer WHERE tier NOT IN ('Bronze','Silver','Gold','Platinum')
@@ -91,7 +92,7 @@ SELECT 'dimcustomer', 'Consistency', 'bronze_high_income', 'Bronze with income >
 FROM dbo.dimcustomer WHERE tier = 'Bronze' AND annualincome > 100000;
 
 -- =====================================================
--- dimproduct (margin_pct range 0-25)
+-- dimproduct (margin_pct fraction -0.10 to 0.30; unitcost>unitprice only if margin>0)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimproduct', 'Null', 'productid_null', 'productid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -104,12 +105,14 @@ FROM dbo.dimproduct WHERE unitprice <= 0
 UNION ALL
 SELECT 'dimproduct', 'Range', 'unitcost_negative', 'unitcost < 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE unitcost < 0
+-- unitcost > unitprice is allowed for negative margin; only flag if margin_pct > 0
 UNION ALL
-SELECT 'dimproduct', 'Range', 'unitcost_gt_unitprice', 'unitcost > unitprice', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE unitcost > unitprice
+SELECT 'dimproduct', 'Logical', 'unitcost_gt_unitprice_pos_margin', 'unitcost > unitprice while margin > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimproduct WHERE unitcost > unitprice AND margin_pct > 0
+-- margin_pct range: -0.10 to 0.30
 UNION ALL
-SELECT 'dimproduct', 'Range', 'margin_pct_outside_0_25', 'margin_pct not in [0,25] (percent)', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE margin_pct < 0 OR margin_pct > 25
+SELECT 'dimproduct', 'Range', 'margin_pct_outside_range', 'margin_pct not in [-0.10, 0.30]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimproduct WHERE margin_pct < -0.10 OR margin_pct > 0.30
 UNION ALL
 SELECT 'dimproduct', 'Range', 'tax_rate_outside_0_1', 'tax_rate not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE tax_rate < 0 OR tax_rate > 1
@@ -142,14 +145,14 @@ SELECT 'dimstore', 'Range', 'rating_out_of_bounds', 'storerating not in [2.0,5.0
 FROM dbo.dimstore WHERE storerating < 2.0 OR storerating > 5.0;
 
 -- =====================================================
--- dimpromotion (discount_pct range 0-100)
+-- dimpromotion (discount_pct fraction 0–0.45)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimpromotion', 'Null', 'promoid_null', 'promoid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimpromotion WHERE promoid IS NULL
 UNION ALL
-SELECT 'dimpromotion', 'Range', 'discount_pct_outside_0_100', 'discount_pct not in [0,100] (percent)', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimpromotion WHERE discount_pct < 0 OR discount_pct > 100
+SELECT 'dimpromotion', 'Range', 'discount_pct_outside_0_0_45', 'discount_pct not in [0.0, 0.45]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimpromotion WHERE discount_pct < 0.0 OR discount_pct > 0.45
 UNION ALL
 SELECT 'dimpromotion', 'Range', 'discount_fixed_negative', 'discount_fixed < 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimpromotion WHERE discount_fixed < 0
@@ -166,7 +169,7 @@ UNION ALL
 SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname', 'duplicate promotion name', (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) = 0 THEN 'PASS' ELSE 'FAIL' END;
 
 -- =====================================================
--- factsales (updated qty limit and hour checks)
+-- factsales (unchanged)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'factsales', 'Financial', 'net_calculation_error', 'net != grossvalue - discountamount + taxamount', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -175,7 +178,7 @@ UNION ALL
 SELECT 'factsales', 'Range', 'unitprice_out_of_bounds', 'unitprice > 3000 or < 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE unitprice > 3000 OR unitprice < 0
 UNION ALL
-SELECT 'factsales', 'Range', 'tax_rate_out_of_bounds', 'tax_rate not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+SELECT 'factsales', 'Range', 'tax_rate_outside_0_1', 'tax_rate not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE tax_rate < 0 OR tax_rate > 1
 UNION ALL
 SELECT 'factsales', 'Logical', 'return_positive_net', 'isreturn=1 but net > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -282,3 +285,6 @@ ELSE
 
 DROP TABLE #dq_checks;
 GO
+-- ============================================================================
+-- End of 03_data_quality_checks.sql
+-- ============================================================================

@@ -1,10 +1,12 @@
--- -------------------------------------------------------------------
+-- ============================================================================
 -- 05_silver_gold_validation.sql
--- Author: DataGen AI
--- Date: 2026-05-23
--- Purpose: Data quality checks across silver and gold layers.
---          Uses correct percentage ranges (margin_pct 0‑25, discount_pct 0‑100).
--- -------------------------------------------------------------------
+-- ============================================================================
+-- Author:       DataGen AI
+-- Date:         2026-05-23
+-- Description:  Data quality checks for silver and gold layers in Fabric.
+--               All _pct columns are fractions (margin_pct -0.10..0.30,
+--               discount_pct 0.0..0.45).
+-- ============================================================================
 
 -- 1. Row counts
 SELECT 'dimdate' AS tbl, COUNT(*) AS cnt FROM `02_silver_db`.`silver_dimdate`
@@ -55,12 +57,18 @@ SELECT 'missing promoid', COUNT(*) FROM `02_silver_db`.`silver_factsales` f
 LEFT JOIN `02_silver_db`.`silver_dimpromotion` p ON f.promoid = p.promoid WHERE p.promoid IS NULL
 ORDER BY ck;
 
--- 6. Percentage ranges (corrected)
-SELECT 'margin_pct' AS col, COUNT(*) AS bad FROM `02_silver_db`.`silver_dimproduct` WHERE margin_pct < 0 OR margin_pct > 25
+-- 6. Fraction range checks (margin_pct -0.10..0.30, discount_pct 0.0..0.45)
+SELECT 'margin_pct' AS col, COUNT(*) AS bad
+FROM `02_silver_db`.`silver_dimproduct`
+WHERE margin_pct < -0.10 OR margin_pct > 0.30
 UNION ALL
-SELECT 'tax_rate', COUNT(*) FROM `02_silver_db`.`silver_dimproduct` WHERE tax_rate < 0 OR tax_rate > 1
+SELECT 'tax_rate', COUNT(*)
+FROM `02_silver_db`.`silver_dimproduct`
+WHERE tax_rate < 0 OR tax_rate > 1
 UNION ALL
-SELECT 'discount_pct', COUNT(*) FROM `02_silver_db`.`silver_dimpromotion` WHERE discount_pct < 0 OR discount_pct > 100
+SELECT 'discount_pct', COUNT(*)
+FROM `02_silver_db`.`silver_dimpromotion`
+WHERE discount_pct < 0.0 OR discount_pct > 0.45
 ORDER BY col;
 
 -- 7. Hour validation
@@ -81,3 +89,6 @@ SELECT 'online_zero', COUNT(*) FROM `02_silver_db`.`silver_factsales` WHERE chan
 -- 10. Gold view summary
 SELECT COUNT(*) AS rows, SUM(total_revenue) AS revenue, AVG(margin_pct) AS avg_margin
 FROM `03_gold_db`.`vw_001_product_category_margin`;
+-- ============================================================================
+-- End of 05_silver_gold_validation.sql
+-- ============================================================================

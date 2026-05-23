@@ -1,11 +1,10 @@
--- =====================================================================
--- MODEL VALIDATION (compatible with final schema)
--- =====================================================================
--- Author:  AI Assistant
--- Created: 2026-05-21
--- Updated: 2026-05-23 (comments updated for 25% margin, percent storage)
--- Purpose: Validate star schema design, referential integrity, and performance
--- =====================================================================
+-- ============================================================================
+-- model_validation.sql
+-- ============================================================================
+-- Author:       DataGen AI
+-- Date:         2026-05-23
+-- Description:  Validates star schema integrity, foreign keys, and CCI.
+-- ============================================================================
 
 USE retailanalytics;
 GO
@@ -24,10 +23,9 @@ CREATE TABLE #model_checks (
     details INT
 );
 
--- 1. Star schema: factsales must have foreign keys to all 5 core dimensions
 INSERT INTO #model_checks
 SELECT 'star_schema',
-       'factsales has foreign keys to all 5 dimensions (date, product, customer, store, promotion)',
+       'factsales has foreign keys to all 5 dimensions',
        CASE WHEN COUNT(*) = 5 THEN 'OK' ELSE 'ISSUE' END,
        COUNT(*)
 FROM sys.foreign_keys
@@ -36,7 +34,6 @@ WHERE parent_object_id = OBJECT_ID('dbo.factsales')
                                OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
                                OBJECT_ID('dbo.dimpromotion'));
 
--- 2. Fact purity: factsales contains only expected columns (including 'hour')
 INSERT INTO #model_checks
 SELECT 'fact_purity',
        'factsales contains only allowed columns (no extra columns)',
@@ -49,7 +46,6 @@ WHERE object_id = OBJECT_ID('dbo.factsales')
                    'discountamount','taxamount','shipcost','isreturn','shipweight',
                    'discountapplied','returnreason','deliverydays','hour');
 
--- 3. All five core dimension tables have a primary key
 INSERT INTO #model_checks
 SELECT 'dimension_keys',
        'all five dimension tables have a primary key',
@@ -60,19 +56,17 @@ WHERE type = 'PK' AND parent_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('
                                            OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
                                            OBJECT_ID('dbo.dimpromotion'));
 
--- 4. Performance: factsales should have a clustered columnstore index
 INSERT INTO #model_checks
 SELECT 'performance',
-       'factsales has a clustered columnstore index (recommended for large fact tables)',
+       'factsales has a clustered columnstore index',
        CASE WHEN COUNT(*) = 1 THEN 'OK' ELSE 'ISSUE' END,
        COUNT(*)
 FROM sys.indexes
 WHERE object_id = OBJECT_ID('dbo.factsales') AND type_desc = 'CLUSTERED COLUMNSTORE';
 
--- 5. Referential integrity: no orphan rows (promoid = 0 is allowed as dummy)
 INSERT INTO #model_checks
 SELECT 'referential_integrity',
-       'no orphan rows in factsales (all foreign keys have matching dimension records; promoid = 0 refers to dummy "No Promotion" row)',
+       'no orphan rows in factsales (including promoid=0)',
        CASE WHEN orphan_count = 0 THEN 'OK' ELSE 'ISSUE' END,
        orphan_count
 FROM (
@@ -84,11 +78,9 @@ FROM (
     LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid
     LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
     WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
-       OR s.storeid IS NULL
-       OR pr.promoid IS NULL
+       OR s.storeid IS NULL OR pr.promoid IS NULL
 ) AS orphan_check;
 
--- Final report
 SELECT check_category, check_description, check_result, details
 FROM #model_checks
 ORDER BY CASE WHEN check_result = 'ISSUE' THEN 0 ELSE 1 END, check_category;
@@ -99,3 +91,6 @@ PRINT '=========================================================================
 PRINT 'MODEL VALIDATION COMPLETED.';
 PRINT '================================================================================';
 GO
+-- ============================================================================
+-- End of model_validation.sql
+-- ============================================================================

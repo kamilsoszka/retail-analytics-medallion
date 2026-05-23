@@ -1,28 +1,23 @@
 # ============================================================================
 # final_retail_gen.py
 # ============================================================================
-# Author: DataGen AI
-# Creation date: 2026-05-23
-# Last modified: 2026-05-23
-# Purpose: Generate high‑quality synthetic retail data (10M sales rows)
-#   - All columns non‑NULL, primary keys unique, referential integrity enforced.
-#   - Percentages stored as Power BI‑ready values (e.g., 12.50 = 12.50%).
-#   - Product margin capped at 25% (stored as 25.00).
-#   - Trend: decline (60k→50k) → flat → strong rise (50k→95k).
-#   - Chunked CSV export for memory efficiency.
-#   - FIX: quantities scaled to meet daily net‑sales target, preserving margins.
-#   - FIX: gender string uses standard hyphen 'Non-binary'
-#   - FIX: discountapplied set AFTER rounding discountamount to avoid mismatch
+# Author:       DataGen AI
+# Date:         2026-05-23
+# Description:  Generates 10M retail sales rows + dimension CSVs.
+#               Margins follow a realistic distribution (see product_margin_dist).
+#               All _pct columns stored as fractions (0.0–1.0).
+#               Gender limited to Male/Female.
+#               Higher variance in store size, customer spend, and product prices.
+#               margin_pct is rounded to 4 decimal places to fit DECIMAL(5,4).
 # ============================================================================
 
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-import os
-import random
+import os, random
 
 # ============================================================================
-# CONFIGURATION
+# Configuration
 # ============================================================================
 OUTPUT_DIR = "c:/data"
 N_SALES = 10_000_000
@@ -38,14 +33,12 @@ if RANDOM_SEED is not None:
     random.seed(RANDOM_SEED)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 START_DATE = datetime(2023, 1, 1)
 END_DATE = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
 print(f"Generating data from {START_DATE.date()} to {END_DATE.date()}")
 
 # ============================================================================
-# STATIC REFERENCE DATA (all non‑empty)
+# Static reference data
 # ============================================================================
 STORE_CHAINS = {
     'Supermarket': ['FreshMart','CityFood','DailyGrocer','MarketPlace','ValueSave','GoodMart'],
@@ -86,7 +79,7 @@ BRANDS = {
 FIRST_NAMES_MALE = ['James','John','Robert','Michael','William','David','Richard','Joseph','Thomas','Charles','Daniel','Matthew']
 FIRST_NAMES_FEMALE = ['Mary','Patricia','Jennifer','Linda','Elizabeth','Barbara','Susan','Jessica','Sarah','Karen','Lisa','Nancy']
 LAST_NAMES = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez']
-GENDERS = ['Male','Female','Non-binary']            # standard hyphen
+GENDERS = ['Male','Female']                    # only two genders
 EDUCATION = ['High School','Bachelor','Master','PhD']
 MARITAL = ['Single','Married','Divorced','Widowed']
 CONTACT_PREF = ['Email','SMS','Phone','Mail']
@@ -104,10 +97,9 @@ CATEGORY_CFG = {
 }
 
 # ---------------------------------------------------------------------------
-# Helper: replace any remaining NULL / empty strings with defaults
+# Helper functions
 # ---------------------------------------------------------------------------
 def clean_df(df, string_default='Unknown', int_default=0, float_default=0.0):
-    """Replace NULLs and empty strings with defaults for Power BI compatibility."""
     for col in df.select_dtypes(include=['object']).columns:
         df[col] = df[col].fillna(string_default).replace('', string_default).astype(str)
     for col in df.select_dtypes(include=['int64','int32']).columns:
@@ -116,9 +108,6 @@ def clean_df(df, string_default='Unknown', int_default=0, float_default=0.0):
         df[col] = df[col].fillna(float_default)
     return df
 
-# ---------------------------------------------------------------------------
-# Data quality verification helpers
-# ---------------------------------------------------------------------------
 def check_primary_key(df, key_col, table_name):
     if df[key_col].is_unique:
         print(f"✓ {table_name}: Primary key '{key_col}' is unique.")
@@ -134,24 +123,10 @@ def check_no_nulls(df, table_name):
     else:
         raise ValueError(f"✗ {table_name}: NULLs found in columns: {null_cols.to_dict()}")
 
-def check_product_margin(product_df):
-    """
-    Ensure product margin (unitprice – unitcost)/unitprice * 100 ≤ 25.0.
-    If exceeded, clip cost to enforce exactly 25% margin and set margin_pct to 25.0.
-    """
-    margin_pct = (product_df['unitprice'] - product_df['unitcost']) / product_df['unitprice'] * 100
-    violations = margin_pct > 25.0
-    if violations.sum() == 0:
-        print("✓ Product margins: All ≤ 25% (percent).")
-    else:
-        print(f"⚠ WARNING: {violations.sum()} products have margin >25%. Clipping to 25%.")
-        product_df.loc[violations, 'unitcost'] = product_df.loc[violations, 'unitprice'] * 0.75
-        product_df.loc[violations, 'margin_pct'] = 25.0
-
 # ============================================================================
-# DIMENSION: STORES (UNIQUE NAMES)
+# DIMENSION: STORES (higher variance in size and revenue potential)
 # ============================================================================
-print("Generating dim_store with unique names...")
+print("Generating dim_store with unique names and realistic spread...")
 store_ids = np.arange(1, N_STORES + 1)
 unique_names = set()
 store_data = []
@@ -176,18 +151,19 @@ store_regions = [d[3] for d in store_data]
 store_chains = [d[4] for d in store_data]
 store_suffixes = [d[5] for d in store_data]
 
-store_size_mult = np.random.lognormal(mean=0.2, sigma=0.9, size=N_STORES).clip(0.3, 4.0)
-city_rent_mult = {city: 1.0 + np.random.uniform(0.0, 0.8) for city in store_cities}
+# Much wider spread for store size multiplier (0.1 to 10.0)
+store_size_mult = np.random.lognormal(mean=0.5, sigma=1.2, size=N_STORES).clip(0.1, 10.0)
+city_rent_mult = {city: 1.0 + np.random.uniform(0.0, 1.5) for city in store_cities}   # wider rent variation
 store_sizem2 = np.where(np.array(store_types) == 'Hypermarket', np.random.randint(2500, 5000, N_STORES),
                 np.where(np.array(store_types) == 'Supermarket', np.random.randint(800, 2500, N_STORES),
                 np.where(np.array(store_types) == 'Department', np.random.randint(1200, 3500, N_STORES),
                 np.random.randint(150, 800, N_STORES))))
-store_staff = np.clip((store_sizem2 / 45 + np.random.normal(0, 5, N_STORES)).astype(int), 3, 120)
-store_parking = np.clip((store_sizem2 / 25 + np.random.normal(0, 10, N_STORES)).astype(int), 0, 300)
+store_staff = np.clip((store_sizem2 / 45 + np.random.normal(0, 8, N_STORES)).astype(int), 3, 200)
+store_parking = np.clip((store_sizem2 / 25 + np.random.normal(0, 15, N_STORES)).astype(int), 0, 500)
 store_annualrent = (store_sizem2 * 12 * np.array([city_rent_mult.get(c, 1.0) for c in store_cities]) *
                     np.where(np.array(store_types) == 'Hypermarket', 0.8,
                     np.where(np.array(store_types) == 'Convenience', 1.4, 1.0))).round(0)
-store_rating = np.clip(2.0 + (store_staff/120)*0.8 + (store_parking/300)*0.5 + np.random.uniform(0, 1.2, N_STORES), 2.0, 5.0).round(1)
+store_rating = np.clip(2.0 + (store_staff/200)*0.8 + (store_parking/500)*0.5 + np.random.uniform(0, 1.2, N_STORES), 2.0, 5.0).round(1)
 
 store_df = pd.DataFrame({
     'storeid': store_ids,
@@ -219,9 +195,11 @@ assert store_df['storename'].is_unique, "Duplicate store names found!"
 store_df.to_csv(f"{OUTPUT_DIR}/dim_store.csv", index=False, encoding='utf-8')
 
 # ============================================================================
-# DIMENSION: PRODUCTS (margin ≤ 25%, stored as percentage, unique names)
+# DIMENSION: PRODUCTS (margin distribution as requested)
 # ============================================================================
-print("Generating dim_product (margin ≤ 25%)...")
+print("Generating dim_product with specified margin distribution...")
+
+# product name pool (unchanged)
 product_pool = []
 product_names_set = set()
 while len(product_pool) < N_PRODUCTS * 1.5:
@@ -243,6 +221,30 @@ product_categories = np.array([p[1] for p in selected_products])
 product_brands = [p[2] for p in selected_products]
 product_brand_premium = np.random.uniform(0.9, 1.5, N_PRODUCTS)
 
+# Assign margin according to distribution
+margins = np.zeros(N_PRODUCTS)
+# 5% exactly 30%
+margins[:int(N_PRODUCTS*0.05)] = 0.30
+# 5% between 29% and 20% (uniform)
+idx2 = int(N_PRODUCTS*0.05)
+idx3 = int(N_PRODUCTS*0.10)
+margins[idx2:idx3] = np.random.uniform(0.20, 0.29, idx3-idx2)
+# 5% exactly 15%
+idx4 = int(N_PRODUCTS*0.15)
+margins[idx3:idx4] = 0.15
+# 50% between 10% and 5%
+idx5 = int(N_PRODUCTS*0.65)
+margins[idx4:idx5] = np.random.uniform(0.05, 0.10, idx5-idx4)
+# 30% between 5% and 0%
+idx6 = int(N_PRODUCTS*0.95)
+margins[idx5:idx6] = np.random.uniform(0.00, 0.05, idx6-idx5)
+# remaining 5% between -10% and 0%
+margins[idx6:] = np.random.uniform(-0.10, 0.00, N_PRODUCTS-idx6)
+np.random.shuffle(margins)   # mix the order
+
+# FIX: round margins to 4 decimal places to fit DECIMAL(5,4)
+margins = np.round(margins, 4)
+
 product_weights = []
 product_unitprice = []
 product_unitcost = []
@@ -250,22 +252,19 @@ product_tax_rate = []
 product_warranty = []
 product_ecoscore = []
 product_material = []
-product_margin_pct = []   # will store percentage (0..25)
+product_margin_pct = []
 
 for i, cat in enumerate(product_categories):
     cfg = CATEGORY_CFG[cat]
     w = round(np.random.uniform(cfg['weight_lo'], cfg['weight_hi']), 2)
     p_base = round(np.random.uniform(cfg['price_lo'], cfg['price_hi']), 2)
     p_final = round(p_base * product_brand_premium[i], 2)
-    margin_fraction = np.random.uniform(0.01, 0.25)
-    cost = p_final * (1 - margin_fraction)
-    actual_margin = (p_final - cost) / p_final
-    if actual_margin > 0.250001:
-        cost = p_final * 0.75
-        margin_pct_val = 25.0
-    else:
-        margin_pct_val = round(actual_margin * 100, 2)
-    cost = round(cost, 2)
+    margin = margins[i]
+    cost = round(p_final * (1 - margin), 2)
+    # ensure cost positive
+    if cost <= 0:
+        cost = round(p_final * 0.75, 2)
+        margin = round((p_final - cost) / p_final, 4)
     product_weights.append(w)
     product_unitprice.append(p_final)
     product_unitcost.append(cost)
@@ -273,7 +272,7 @@ for i, cat in enumerate(product_categories):
     product_warranty.append(int(np.random.random() < cfg['warranty_prob']))
     product_ecoscore.append(int(np.random.uniform(20, 200)))
     product_material.append(np.random.choice(['Plastic','Metal','Wood','Glass','Fabric']))
-    product_margin_pct.append(margin_pct_val)
+    product_margin_pct.append(margin)
 
 product_isactive = np.random.choice([0, 1], N_PRODUCTS, p=[0.05, 0.95]).astype(int)
 product_stockstatus = np.where(product_isactive == 0, 'Out of Stock',
@@ -293,7 +292,7 @@ product_df = pd.DataFrame({
     'brand': product_brands,
     'unitcost': product_unitcost,
     'unitprice': product_unitprice,
-    'margin_pct': product_margin_pct,
+    'margin_pct': product_margin_pct,   # fraction, already rounded to 4 decimal places
     'weight': product_weights,
     'color': np.random.choice(['Red','Blue','Green','Black','White','Gray','Silver','Gold'], N_PRODUCTS),
     'material': product_material,
@@ -315,11 +314,17 @@ product_df = pd.DataFrame({
 product_df = clean_df(product_df, string_default='Unknown Product')
 check_primary_key(product_df, 'productid', 'dim_product')
 check_no_nulls(product_df, 'dim_product')
-check_product_margin(product_df)
+
+# Quick check margin cap
+max_margin = product_df['margin_pct'].max()
+min_margin = product_df['margin_pct'].min()
+print(f"Product margins: min={min_margin:.4f}, max={max_margin:.4f}")
+if max_margin > 0.30:
+    print("WARNING: Margin exceeds 30%!")
 product_df.to_csv(f"{OUTPUT_DIR}/dim_product.csv", index=False, encoding='utf-8')
 
 # ============================================================================
-# DIMENSION: PROMOTIONS (dummy row promoid=0, discount_pct as percentage)
+# DIMENSION: PROMOTIONS (discount_pct as fraction)
 # ============================================================================
 print("Generating dim_promotion...")
 dummy_promo = pd.DataFrame([{
@@ -345,11 +350,11 @@ dummy_promo = pd.DataFrame([{
 promo_ids = np.arange(1, N_PROMOTIONS + 1)
 promo_types = np.random.choice(['Percentage','Fixed Amount','BOGO','Free Shipping'], N_PROMOTIONS, p=[0.35,0.25,0.25,0.15])
 promo_channels = np.where(promo_types == 'Free Shipping', 'Online', np.random.choice(['Email','SMS','App','InStore','All'], N_PROMOTIONS))
-
-promo_discount_pct = np.where(promo_types == 'Percentage', np.random.uniform(10,45,N_PROMOTIONS).round(2), 0.0)
+# discount_pct as fraction (0.10–0.45)
+promo_discount_pct = np.where(promo_types == 'Percentage', np.random.uniform(0.10,0.45,N_PROMOTIONS).round(4), 0.0)
 promo_discount_fixed = np.where(promo_types == 'Fixed Amount', np.random.uniform(3,30,N_PROMOTIONS).round(2), 0.0)
 
-promo_budgets = (np.where(promo_types == 'Percentage', promo_discount_pct/100, promo_discount_fixed/100) * N_SALES * 0.002 * np.random.uniform(0.8,1.5,N_PROMOTIONS)).round(0)
+promo_budgets = (np.where(promo_types == 'Percentage', promo_discount_pct, promo_discount_fixed/100) * N_SALES * 0.002 * np.random.uniform(0.8,1.5,N_PROMOTIONS)).round(0)
 
 promo_uplift = np.zeros(N_PROMOTIONS)
 for i, pt in enumerate(promo_types):
@@ -375,7 +380,7 @@ used_names = set()
 for i, ptype in enumerate(promo_types):
     template = np.random.choice(PROMO_TEMPLATES[ptype])
     if ptype == 'Percentage':
-        disc = int(promo_discount_pct[i])
+        disc = int(promo_discount_pct[i]*100)
         base = f"{template} {disc}% OFF"
     elif ptype == 'Fixed Amount':
         amount = int(promo_discount_fixed[i])
@@ -416,9 +421,9 @@ check_no_nulls(promo_df, 'dim_promotion')
 promo_df.to_csv(f"{OUTPUT_DIR}/dim_promotion.csv", index=False, encoding='utf-8')
 
 # ============================================================================
-# DIMENSION: CUSTOMERS (vectorised name/email generation)
+# DIMENSION: CUSTOMERS (higher variance in income and spend)
 # ============================================================================
-print("Generating dim_customer...")
+print("Generating dim_customer with realistic income spread...")
 customer_ids = np.arange(1, N_CUSTOMERS + 1)
 gender_choice = np.random.choice(['Male','Female'], N_CUSTOMERS, p=[0.5,0.5])
 first_names = np.where(gender_choice == 'Male',
@@ -443,19 +448,25 @@ age_probs = np.where(age_range < 25, 0.02, np.where(age_range < 40, 0.035, np.wh
 age_probs /= age_probs.sum()
 customer_age = np.random.choice(age_range, N_CUSTOMERS, p=age_probs)
 
-customer_income = np.random.lognormal(mean=9.8, sigma=0.6, size=N_CUSTOMERS).clip(8000, 100000)
-customer_tier = np.where(customer_income > 70000, 'Platinum',
-                np.where(customer_income > 45000, 'Gold',
-                np.where(customer_income > 25000, 'Silver', 'Bronze')))
-customer_spend_mult = np.where(customer_tier == 'Platinum', np.random.uniform(3.0,6.0,N_CUSTOMERS),
-                        np.where(customer_tier == 'Gold', np.random.uniform(1.8,3.0,N_CUSTOMERS),
-                        np.where(customer_tier == 'Silver', np.random.uniform(0.8,1.5,N_CUSTOMERS), np.random.uniform(0.2,0.6,N_CUSTOMERS))))
-customer_points = np.clip((customer_spend_mult * 45 + np.random.poisson(20,N_CUSTOMERS)).astype(int), 0, 800)
+# Income – use a mixture of two lognormals for a more realistic spread
+low_income = np.random.lognormal(mean=9.5, sigma=0.8, size=N_CUSTOMERS//2).clip(5000, 60000)
+high_income = np.random.lognormal(mean=10.5, sigma=0.6, size=N_CUSTOMERS - N_CUSTOMERS//2).clip(30000, 200000)
+customer_income = np.concatenate([low_income, high_income])
+np.random.shuffle(customer_income)
+customer_income = customer_income[:N_CUSTOMERS]
+
+customer_tier = np.where(customer_income > 80000, 'Platinum',
+                np.where(customer_income > 50000, 'Gold',
+                np.where(customer_income > 30000, 'Silver', 'Bronze')))
+customer_spend_mult = np.where(customer_tier == 'Platinum', np.random.uniform(3.0,8.0,N_CUSTOMERS),
+                        np.where(customer_tier == 'Gold', np.random.uniform(1.8,3.5,N_CUSTOMERS),
+                        np.where(customer_tier == 'Silver', np.random.uniform(0.8,1.8,N_CUSTOMERS), np.random.uniform(0.2,0.8,N_CUSTOMERS))))
+customer_points = np.clip((customer_spend_mult * 45 + np.random.poisson(20,N_CUSTOMERS)).astype(int), 0, 1200)
 regdate_days = np.random.exponential(600, N_CUSTOMERS).astype(int)
 max_days_date = (END_DATE - START_DATE).days
 regdate_days_clipped = np.minimum(regdate_days, max_days_date)
 customer_regdate = [(START_DATE + timedelta(days=int(d))).strftime('%Y-%m-%d') for d in regdate_days_clipped]
-customer_totalSpend = (customer_spend_mult * np.random.exponential(180,N_CUSTOMERS)).round(2)
+customer_totalSpend = (customer_spend_mult * np.random.exponential(250,N_CUSTOMERS)).round(2)
 customer_satisfactionscore = np.clip(2.5 + (customer_tier == 'Platinum')*1.0 + (customer_tier == 'Gold')*0.6 + np.random.normal(0,0.8,N_CUSTOMERS), 1.0,5.0).round(1)
 customer_dayssincelast = np.where(customer_tier == 'Platinum', np.random.exponential(5,N_CUSTOMERS),
                            np.where(customer_tier == 'Gold', np.random.exponential(12,N_CUSTOMERS),
@@ -480,7 +491,7 @@ customer_df = pd.DataFrame({
     'fullname': fullname.values,
     'email': email.values,
     'age': customer_age,
-    'gender': np.random.choice(GENDERS, N_CUSTOMERS, p=[0.48,0.48,0.04]),
+    'gender': gender_choice,
     'city': customer_cities,
     'tier': customer_tier,
     'points': customer_points,
@@ -534,11 +545,10 @@ date_df = clean_df(date_df)
 check_primary_key(date_df, 'datekey', 'dim_date')
 check_no_nulls(date_df, 'dim_date')
 date_df.to_csv(f"{OUTPUT_DIR}/dim_date.csv", index=False, encoding='utf-8')
-
 print("All dimension files exported successfully ✓")
 
 # ============================================================================
-# TREND: DECLINE → FLAT → STRONG RISE AT THE END
+# TREND: DECLINE → FLAT → STRONG RISE AT THE END (unchanged)
 # ============================================================================
 print("Generating trend: decline (60k→50k) then flat, then strong rise to 95k at end...")
 n_dates = len(dates)
@@ -576,7 +586,7 @@ daily_net_sales_target = np.maximum(np.round(final_values).astype(int), 1000)
 print(f"Trend: start={daily_net_sales_target[0]}, min={daily_net_sales_target.min()}, end={daily_net_sales_target[-1]}")
 
 # ============================================================================
-# FACT SALES GENERATION (10M rows, hour column, no NULLs) – FINAL FIXES
+# FACT SALES GENERATION (10M rows, quantity scaling, no NULLs)
 # ============================================================================
 print(f"\nGenerating fact_sales ({N_SALES:,} rows) in chunks...")
 datekeys = date_df['datekey'].values
@@ -700,7 +710,6 @@ for day_idx in range(n_dates):
     raw_qty = np.random.poisson(2, n_tr) + 1
     disc_factor = np.random.uniform(0, 0.3, n_tr)
 
-    # compute initial net for scaling
     gross_temp = raw_qty * unit_prices
     net_temp = gross_temp * (1 - disc_factor) + (gross_temp * (1 - disc_factor) * tax_rates)
     total_net = net_temp.sum()
@@ -711,14 +720,12 @@ for day_idx in range(n_dates):
 
     scaled_qty = np.maximum(np.round(raw_qty * scale_factor).astype(int), 1)
 
-    # recalculate monetary columns
     gross = scaled_qty * unit_prices
     net_before_tax = gross * (1 - disc_factor)
     tax = net_before_tax * tax_rates
     net_sales = net_before_tax + tax
     disc_amount = gross - net_before_tax
 
-    # round discount and set flag based on rounded value
     disc_amount_rounded = disc_amount.round(2)
     discountapplied = (disc_amount_rounded != 0).astype(int)
 
@@ -743,7 +750,6 @@ for day_idx in range(n_dates):
     if mask_ret.any():
         return_reason_arr[mask_ret] = np.random.choice(RETURN_REASONS, mask_ret.sum())
 
-    # negate values for returns
     gross = np.where(is_return == 1, -gross, gross)
     net_sales = np.where(is_return == 1, -net_sales, net_sales)
     disc_amount_rounded = np.where(is_return == 1, -disc_amount_rounded, disc_amount_rounded)
@@ -826,3 +832,6 @@ print(f"✓ Fact table contains exactly {N_SALES:,} rows.")
 print("\n✅ All data quality checks passed.")
 print(f"\nAll files created. Data range: {START_DATE.date()} to {END_DATE.date()}")
 print(f"Script finished at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+# ============================================================================
+# End of final_retail_gen.py
+# ============================================================================
