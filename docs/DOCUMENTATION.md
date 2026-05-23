@@ -2,7 +2,7 @@ Retail Analytics – Complete Documentation (Final)
 
 Project Overview – The database models a multi-channel retail chain (Online, In-Store, Mobile App, Phone Order) with 10 million sales transactions generated from 2023-01-01 to the current date (dynamic). The data generator produces a realistic trend: first half of the timeline: slight decline from 60k to 50k (moderate drop); middle section: stagnation (flat); last 30% of time: strong rise from 50k to 95k (final growth).
 
-All percentages are stored as fractions (e.g., 0.15 = 15%). Promotions: promoid = 0 means "No Promotion" (a dedicated row exists in dimpromotion). Returns: returnreason = 'No return' for non-return transactions (never NULL). Delivery: deliverydays = 0 for all In-Store transactions. Hour: column hour (0-23) is always populated, never NULL. The schema follows a star design with five dimensions and one fact table.
+All percentage values (margin_pct in dim_product, discount_pct in dim_promotion) are stored as percentages (e.g., 25.00 = 25%). Other rate columns (tax_rate, redemption_rate, seasonalityfactor) remain as decimal fractions (e.g., 0.21 = 21%). Product margin never exceeds 25% (enforced in generation). Promotions: promoid = 0 means "No Promotion" (a dedicated row exists in dimpromotion). Returns: returnreason = 'No return' for non-return transactions (never NULL). Delivery: deliverydays = 0 for all In-Store transactions. Hour: column hour (0-23) is always populated, never NULL. The schema follows a star design with five dimensions and one fact table.
 
 Table Definitions
 
@@ -63,14 +63,14 @@ dim_product
 | brand | NVARCHAR(50) | brand name |
 | unitcost | DECIMAL(18,2) | cost price (USD) |
 | unitprice | DECIMAL(18,2) | base selling price (before market multiplier) |
-| margin_pct | DECIMAL(5,4) | (price-cost)/price |
+| margin_pct | DECIMAL(5,2) | profit margin as percentage (e.g., 25.00 = 25%) |
 | weight | DECIMAL(10,2) | kg |
 | color | NVARCHAR(20) | Red / Blue / Green / Black / White / Gray / Silver / Gold |
 | material | NVARCHAR(50) | Plastic / Metal / Wood / Glass / Fabric |
 | supplierid | INT | 1-50 |
 | isactive | TINYINT | 1 = still sold |
 | minstock | INT | reorder level |
-| tax_rate | DECIMAL(5,4) | 0.10 or 0.21 |
+| tax_rate | DECIMAL(5,4) | 0.10 or 0.21 (fraction) |
 | haswarranty | TINYINT | 1 = warranty offered |
 | ecofriendly | TINYINT | 1 = ecoscore > 100 |
 | seasonalityfactor | DECIMAL(5,2) | demand multiplier (0.7-1.3) |
@@ -108,7 +108,7 @@ dim_promotion
 |--------|------|-------------|
 | promoid | INT | PK (0 = "No Promotion", 1..100 = real promotions) |
 | promoname | NVARCHAR(150) | unique name |
-| discount_pct | DECIMAL(5,3) | percentage discount (fraction) |
+| discount_pct | DECIMAL(5,2) | percentage discount (e.g., 25.00 = 25%) |
 | discount_fixed | DECIMAL(10,2) | fixed USD discount |
 | type | NVARCHAR(50) | Percentage / Fixed Amount / BOGO / Free Shipping |
 | isactive | TINYINT | 1 = currently active |
@@ -120,7 +120,7 @@ dim_promotion
 | targetaudience | NVARCHAR(50) | All / New / Loyal / HighSpend |
 | maxdiscountcap | DECIMAL(18,2) | max discount USD |
 | isstackable | TINYINT | 1 = can combine |
-| redemption_rate | DECIMAL(5,3) | target redemption rate (0.02-0.35) |
+| redemption_rate | DECIMAL(5,3) | target redemption rate (0.02-0.35, fraction) |
 | coderequired | TINYINT | 1 = promo code needed |
 | promoupliftfactor | DECIMAL(6,3) | sales multiplier (1.0-2.2) |
 
@@ -133,9 +133,9 @@ factsales
 | customerid | INT | FK to dim_customer |
 | storeid | INT | FK to dim_store |
 | promoid | INT | FK to dim_promotion (0 = no promotion) |
-| qty | TINYINT | 1-10 |
+| qty | TINYINT | 1-10 (scaled to meet daily target) |
 | unitprice | DECIMAL(18,2) | actual selling price |
-| tax_rate | DECIMAL(5,4) | 0.10 or 0.21 |
+| tax_rate | DECIMAL(5,4) | 0.10 or 0.21 (fraction) |
 | net | DECIMAL(18,2) | gross – discount + tax |
 | payment | NVARCHAR(20) | Card / Cash / Bank Transfer / Digital Wallet / PayPal |
 | channel | NVARCHAR(20) | Online / In-Store / Mobile App / Phone Order |
@@ -150,83 +150,119 @@ factsales
 | deliverydays | TINYINT | 0 for in-store, 1-10 for online/mobile/phone |
 | hour | TINYINT | hour of transaction (0-23), never NULL |
 
-Selected SQL Queries (examples)
+Comprehensive Query Reference
 
-Total revenue (excl. returns):
-SELECT SUM(net) FROM dbo.factsales WHERE isreturn = 0;
+Each business question is answered with T-SQL, DAX, and Python (pandas) examples. Unless noted, all monetary values are in USD.
 
-Total COGS:
-SELECT SUM(f.qty * p.unitcost) FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+1. Total revenue (excl. returns)
+T-SQL: SELECT SUM(net) AS total_revenue FROM dbo.factsales WHERE isreturn = 0;
+DAX:   Total Revenue = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[net])
+Python:
+df = fact_df  # assuming fact_df loaded from CSV/Delta
+total_revenue = df[df['isreturn']==0]['net'].sum()
 
-Gross profit:
-SELECT SUM(f.net - f.qty * p.unitcost) FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+2. Total COGS
+T-SQL: SELECT SUM(f.qty * p.unitcost) AS total_cogs FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+DAX:   Total COGS = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[qty] * RELATED(dimproduct[unitcost]))
+Python:
+merged = fact_df.merge(product_df, on='productid')
+total_cogs = (merged.loc[merged['isreturn']==0, 'qty'] * merged.loc[merged['isreturn']==0, 'unitcost']).sum()
 
-Gross margin percentage:
-SELECT (SUM(f.net - f.qty * p.unitcost) / NULLIF(SUM(f.net), 0)) FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+3. Gross profit
+T-SQL: SELECT SUM(f.net - f.qty * p.unitcost) AS gross_profit FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+DAX:   Gross Profit = [Total Revenue] - [Total COGS]
+Python:
+gross_profit = total_revenue - total_cogs
 
-Return rate:
-SELECT 1.0 * SUM(CASE WHEN isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*) FROM dbo.factsales;
+4. Gross margin %
+T-SQL: SELECT (SUM(f.net - f.qty * p.unitcost) / NULLIF(SUM(f.net), 0)) AS gross_margin_pct FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0;
+      (Returns a fraction; multiply by 100 for percentage display.)
+DAX:   Gross Margin % = DIVIDE([Gross Profit], [Total Revenue], 0)
+Python:
+gross_margin_pct = gross_profit / total_revenue if total_revenue != 0 else 0
 
-Discount penetration:
-SELECT 1.0 * SUM(CASE WHEN discountapplied = 1 THEN 1 ELSE 0 END) / COUNT(*) FROM dbo.factsales WHERE isreturn = 0;
+5. Average basket value
+T-SQL: SELECT SUM(net) / COUNT(DISTINCT salesid) AS avg_basket_value FROM dbo.factsales WHERE isreturn = 0;
+DAX:   Average Basket Value = DIVIDE([Total Revenue], DISTINCTCOUNT(FILTER(factsales, factsales[isreturn]=0), factsales[salesid]))
+Python:
+avg_basket_value = df[df['isreturn']==0]['net'].sum() / df[df['isreturn']==0]['salesid'].nunique()
 
-Orphan checks (all foreign keys must be valid):
-SELECT 'fact_sales' AS tbl, COUNT(*) FROM dbo.factsales f LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey WHERE d.datekey IS NULL
-UNION ALL
-SELECT 'fact_sales', COUNT(*) FROM dbo.factsales f LEFT JOIN dbo.dimproduct p ON f.productid = p.productid WHERE p.productid IS NULL
-UNION ALL
-SELECT 'fact_sales', COUNT(*) FROM dbo.factsales f LEFT JOIN dbo.dimcustomer c ON f.customerid = c.customerid WHERE c.customerid IS NULL
-UNION ALL
-SELECT 'fact_sales', COUNT(*) FROM dbo.factsales f LEFT JOIN dbo.dimstore s ON f.storeid = s.storeid WHERE s.storeid IS NULL
-UNION ALL
-SELECT 'fact_sales', COUNT(*) FROM dbo.factsales f LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE p.promoid IS NULL;
+6. Return rate
+T-SQL: SELECT 1.0 * SUM(CASE WHEN isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*) AS return_rate FROM dbo.factsales;
+DAX:   Return Rate = DIVIDE(COUNTROWS(FILTER(factsales, factsales[isreturn]=1)), COUNTROWS(factsales), 0)
+Python:
+return_rate = df['isreturn'].mean()
 
-Selected DAX Measures (Power BI)
+7. Discount penetration
+T-SQL: SELECT 1.0 * SUM(CASE WHEN discountapplied = 1 THEN 1 ELSE 0 END) / COUNT(*) AS discount_penetration FROM dbo.factsales WHERE isreturn = 0;
+DAX:   Discount Penetration = DIVIDE(COUNTROWS(FILTER(factsales, factsales[discountapplied]=1 && factsales[isreturn]=0)), COUNTROWS(FILTER(factsales, factsales[isreturn]=0)), 0)
+Python:
+discount_penetration = df[(df['isreturn']==0) & (df['discountapplied']==1)].shape[0] / df[df['isreturn']==0].shape[0]
 
-Total Revenue = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[net])
+8. Unique customers
+T-SQL: SELECT COUNT(DISTINCT customerid) AS unique_customers FROM dbo.factsales WHERE isreturn = 0;
+DAX:   Unique Customers = DISTINCTCOUNT(FILTER(factsales, factsales[isreturn]=0), factsales[customerid])
+Python:
+unique_customers = df[df['isreturn']==0]['customerid'].nunique()
 
-Total COGS = SUMX(FILTER(factsales, factsales[isreturn]=0), factsales[qty] * RELATED(dimproduct[unitcost]))
+9. Revenue by channel
+T-SQL: SELECT channel, SUM(net) AS revenue FROM dbo.factsales WHERE isreturn = 0 GROUP BY channel ORDER BY revenue DESC;
+DAX:   Channel Revenue = SUMMARIZE(FILTER(factsales, factsales[isreturn]=0), factsales[channel], "Revenue", SUM(factsales[net]))
+Python:
+channel_revenue = df[df['isreturn']==0].groupby('channel')['net'].sum().sort_values(ascending=False)
 
-Gross Profit = [Total Revenue] - [Total COGS]
+10. Revenue by product category
+T-SQL: SELECT p.category, SUM(f.net) AS revenue FROM dbo.factsales f JOIN dbo.dimproduct p ON f.productid = p.productid WHERE f.isreturn = 0 GROUP BY p.category ORDER BY revenue DESC;
+DAX:    Category Revenue = SUMMARIZE(FILTER(factsales, factsales[isreturn]=0), dimproduct[category], "Revenue", SUM(factsales[net]))
+Python:
+merged = fact_df.merge(product_df, on='productid')
+cat_rev = merged[merged['isreturn']==0].groupby('category')['net'].sum().sort_values(ascending=False)
 
-Gross Margin % = DIVIDE([Gross Profit], [Total Revenue], 0)
+11. 7‑day moving average of daily sales
+T-SQL:
+WITH daily AS (
+  SELECT d.fulldate, SUM(f.net) AS daily_total
+  FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
+  WHERE f.isreturn = 0
+  GROUP BY d.fulldate
+)
+SELECT fulldate, daily_total,
+       AVG(daily_total) OVER (ORDER BY fulldate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS ma_7days
+FROM daily ORDER BY fulldate;
+DAX:    7D Moving Avg = CALCULATE(AVERAGEX(DATESINPERIOD(dimdate[fulldate], LASTDATE(dimdate[fulldate]), -7, DAY), [Total Revenue]), ALL(dimdate))
+Python:
+daily = df[df['isreturn']==0].groupby('fulldate')['net'].sum().reset_index()
+daily['ma_7days'] = daily['net'].rolling(7).mean()
 
-Average Basket Value = DIVIDE([Total Revenue], DISTINCTCOUNT(FILTER(factsales, factsales[isreturn]=0), factsales[salesid]))
+12. Promotion effect (average daily revenue with vs without promo)
+T-SQL:
+WITH promo_days AS (
+  SELECT d.fulldate,
+         MAX(CASE WHEN f.promoid > 0 THEN 1 ELSE 0 END) AS has_promo,
+         SUM(f.net) AS daily_revenue
+  FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
+  WHERE f.isreturn = 0
+  GROUP BY d.fulldate
+)
+SELECT has_promo, AVG(daily_revenue) AS avg_revenue FROM promo_days GROUP BY has_promo;
+DAX:    Promo Uplift = VAR Promo = CALCULATE([Total Revenue], factsales[promoid] > 0) VAR NonPromo = CALCULATE([Total Revenue], factsales[promoid] = 0) RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
+Python:
+daily_promo = df[df['isreturn']==0].groupby(['fulldate', df['promoid']>0])['net'].sum().unstack().fillna(0)
+daily_promo.columns = ['non_promo', 'promo']
+avg_promo = daily_promo['promo'].mean()
+avg_non = daily_promo['non_promo'].mean()
+uplift = (avg_promo - avg_non) / avg_non
 
-Return Rate = DIVIDE(COUNTROWS(FILTER(factsales, factsales[isreturn]=1)), COUNTROWS(factsales), 0)
+Dashboard Screenshots (Power BI)
 
-Discount Penetration = DIVIDE(COUNTROWS(FILTER(factsales, factsales[discountapplied]=1 && factsales[isreturn]=0)), COUNTROWS(FILTER(factsales, factsales[isreturn]=0)), 0)
+Revenue Trend: visualising the enforced daily net‑sales pattern (decline → flat → strong rise)
+![Revenue Trend](https://github.com/user-attachments/assets/bb23b6c3-0d5a-4123-8c57-2894939db6c5)
 
-YTD Revenue = TOTALYTD([Total Revenue], dimdate[fulldate])
+Payment Matrix: breakdown of payment methods by channel
+![Payment Matrix](https://github.com/user-attachments/assets/03127137-b303-4257-80d7-99ae06157587)
 
-YoY Revenue = VAR Curr = [Total Revenue] VAR Prev = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(dimdate[fulldate])) RETURN DIVIDE(Curr - Prev, Prev, 0)
-
-Promo Uplift = VAR Promo = CALCULATE([Total Revenue], factsales[promoid] > 0) VAR NonPromo = CALCULATE([Total Revenue], factsales[promoid] = 0) RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
-
-Selected Python Analysis
-
-import pandas as pd
-import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-
-OUTPUT_DIR = "c:/data"
-fact = pd.read_csv(os.path.join(OUTPUT_DIR, "fact_sales.csv"))
-merged = fact.merge(pd.read_csv(os.path.join(OUTPUT_DIR, "dim_date.csv")), on='datekey')
-daily_sales = merged.groupby('fulldate')['grossvalue'].sum().reset_index()
-daily_sales['7d_ma'] = daily_sales['grossvalue'].rolling(7).mean()
-daily_sales['30d_ma'] = daily_sales['grossvalue'].rolling(30).mean()
-
-rfm = merged[merged['isreturn']==0].groupby('customerid').agg({
-    'fulldate': lambda x: (merged['fulldate'].max() - x.max()).days,
-    'salesid': 'count',
-    'net': 'sum'
-}).reset_index()
-rfm.columns = ['customerid', 'recency', 'frequency', 'monetary']
-scaler = StandardScaler()
-rfm_scaled = scaler.fit_transform(rfm[['recency', 'frequency', 'monetary']])
-kmeans = KMeans(n_clusters=5, random_state=42)
-rfm['segment'] = kmeans.fit_predict(rfm_scaled)
+Monthly Revenue: seasonal revenue pattern with clear peaks in December
+![Monthly Revenue](https://github.com/user-attachments/assets/e96770d1-9f3f-481d-9cc6-75898f2ecae4)
 
 License
 MIT – free to use, modify, and distribute.

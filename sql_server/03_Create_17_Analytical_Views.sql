@@ -1,32 +1,25 @@
 -- =====================================================================
 -- deploy_all_analytical_views.sql
+-- =====================================================================
+-- Author:  AI Assistant
+-- Created: 2026-05-23
+-- Updated: 2026-05-23 (margin cap 25%, percentage storage)
 -- Purpose: Create all analytical views for retailanalytics database
---          (compatible with final schema: 10M rows, hour column, margin <=20%)
--- Author:   AI Assistant
--- Date:     2026-05-21
--- Description: Each view has an extended property (MS_Description)
---              explaining its business insight.
+--          Compatible with final schema: 10M rows, hour column, margin ≤25%
 -- =====================================================================
 
 USE retailanalytics;
 GO
 
--- =====================================================================
--- Drop all existing views (if any) – both original and new
--- =====================================================================
+-- Drop all existing numbered views
 DECLARE @sql NVARCHAR(MAX) = '';
-
 SELECT @sql = @sql + 'DROP VIEW IF EXISTS ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name) + ';'
 FROM sys.views
 WHERE name LIKE '[0-9][0-9][0-9]_vw_%' OR name LIKE '[0-9][0-9][0-9][0-9]_vw_%';
-
 EXEC sp_executesql @sql;
 GO
 
--- =====================================================================
--- Helper procedure to add description extended property to a view
--- (checks existence before dropping to avoid error 15217)
--- =====================================================================
+-- Helper to add extended property descriptions
 CREATE OR ALTER PROCEDURE sp_add_view_description
     @view_name NVARCHAR(128),
     @description NVARCHAR(500)
@@ -35,7 +28,6 @@ BEGIN
     DECLARE @schema NVARCHAR(128) = 'dbo';
     DECLARE @fullname NVARCHAR(256) = @schema + '.' + @view_name;
     
-    -- Check if property exists
     IF EXISTS (SELECT 1 FROM sys.extended_properties 
                WHERE major_id = OBJECT_ID(@fullname) 
                  AND minor_id = 0 
@@ -47,7 +39,6 @@ BEGIN
             @level1type = N'VIEW', @level1name = @view_name;
     END
     
-    -- Add new description
     EXEC sp_addextendedproperty 
         @name = N'MS_Description', 
         @value = @description,
@@ -56,9 +47,9 @@ BEGIN
 END
 GO
 
--- =====================================================================
--- VIEW 001: Product category margin analysis
--- =====================================================================
+-- ==========================================================================
+-- 001: Product category margin analysis (margin shown as percent, cap 25%)
+-- ==========================================================================
 CREATE VIEW dbo.[001_vw_product_category_margin]
 AS
 WITH revenue_cost AS (
@@ -80,20 +71,20 @@ SELECT
     total_revenue,
     total_cost,
     total_revenue - total_cost AS total_margin,
-    ROUND((total_revenue - total_cost) / NULLIF(total_revenue, 0), 4) AS margin_pct,
+    -- Margin as percentage (e.g., 25.00 = 25%)
+    ROUND((total_revenue - total_cost) / NULLIF(total_revenue, 0) * 100, 2) AS margin_pct,
     RANK() OVER (PARTITION BY category ORDER BY (total_revenue - total_cost) / NULLIF(total_revenue, 0) DESC) AS rank_in_cat
 FROM revenue_cost
 WHERE total_revenue > 0;
 GO
-
 EXEC sp_add_view_description 
     '001_vw_product_category_margin',
-    'Shows margin per product and category, ranking within category. Identifies top‑performing products.';
+    'Shows margin per product and category (as percent), ranking within category. Margin cap enforced at 25% in dim_product.';
 GO
 
--- =====================================================================
--- VIEW 002: Promotion performance (excluding dummy promo 0)
--- =====================================================================
+-- ==========================================================================
+-- 002: Promotion performance (margin and uplift as percent, discount_pct as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[002_vw_promo_performance]
 AS
 WITH promo_performance AS (
@@ -101,7 +92,7 @@ WITH promo_performance AS (
         p.promoid,
         p.promoname,
         p.type,
-        p.discount_pct,
+        p.discount_pct,             -- already percent (e.g., 25.00)
         p.promoupliftfactor,
         COUNT(DISTINCT f.salesid) AS num_transactions,
         SUM(f.qty) AS total_qty,
@@ -124,22 +115,21 @@ baseline AS (
 SELECT
     pp.*,
     ROUND(pp.revenue / NULLIF(pp.num_transactions, 0), 2) AS avg_basket,
-    ROUND((pp.revenue / NULLIF(pp.num_transactions, 0) - baseline.avg_revenue_baseline) / NULLIF(baseline.avg_revenue_baseline, 0), 4) AS uplift_pct,
-    ROUND(pp.margin / NULLIF(pp.revenue, 0), 4) AS margin_pct,
+    ROUND((pp.revenue / NULLIF(pp.num_transactions, 0) - baseline.avg_revenue_baseline) / NULLIF(baseline.avg_revenue_baseline, 0) * 100, 2) AS uplift_pct,
+    ROUND(pp.margin / NULLIF(pp.revenue, 0) * 100, 2) AS margin_pct,   -- percent
     RANK() OVER (ORDER BY pp.margin DESC) AS margin_rank,
     RANK() OVER (ORDER BY (pp.revenue / NULLIF(pp.num_transactions, 0) - baseline.avg_revenue_baseline) / NULLIF(baseline.avg_revenue_baseline, 0) DESC) AS uplift_rank
 FROM promo_performance pp
 CROSS JOIN baseline;
 GO
-
 EXEC sp_add_view_description 
     '002_vw_promo_performance',
-    'Compares promotional transactions against baseline (no promo). Measures basket uplift and margin impact.';
+    'Compares promotions vs baseline. margin_pct, uplift_pct, discount_pct are all percentages (e.g., 25.00).';
 GO
 
--- =====================================================================
--- VIEW 003: Customer RFM segments (Recency, Frequency, Monetary)
--- =====================================================================
+-- ==========================================================================
+-- 003: Customer RFM segments (margin as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[003_vw_customer_rfm_segments]
 AS
 WITH customer_rfm AS (
@@ -182,19 +172,18 @@ SELECT
     COUNT(*) AS customers,
     AVG(monetary) AS avg_ltv,
     SUM(monetary) AS total_ltv,
-    ROUND(AVG(margin_total / NULLIF(monetary, 0)), 4) AS avg_margin_pct
+    ROUND(AVG(margin_total / NULLIF(monetary, 0)) * 100, 2) AS avg_margin_pct   -- percent
 FROM segments
 GROUP BY segment;
 GO
-
 EXEC sp_add_view_description 
     '003_vw_customer_rfm_segments',
-    'Segments customers into Champions, Loyal, Big Spenders, At Risk, Lost using Recency, Frequency, Monetary scores.';
+    'RFM segmentation with average margin per segment (as percent).';
 GO
 
--- =====================================================================
--- VIEW 004: Returns analysis by channel and reason
--- =====================================================================
+-- ==========================================================================
+-- 004: Returns analysis
+-- ==========================================================================
 CREATE VIEW dbo.[004_vw_returns_analysis]
 AS
 SELECT
@@ -208,15 +197,14 @@ FROM dbo.factsales f
 WHERE f.isreturn = 1
 GROUP BY f.channel, f.returnreason;
 GO
-
 EXEC sp_add_view_description 
     '004_vw_returns_analysis',
-    'Analyzes returns by channel and return reason, including shipping cost and average return value.';
+    'Return counts by channel and reason.';
 GO
 
--- =====================================================================
--- VIEW 005: Channel performance (Online, In-Store, Mobile App, Phone Order)
--- =====================================================================
+-- ==========================================================================
+-- 005: Channel performance
+-- ==========================================================================
 CREATE VIEW dbo.[005_vw_channel_performance]
 AS
 SELECT
@@ -232,15 +220,14 @@ FROM dbo.factsales f
 INNER JOIN dbo.dimproduct p ON f.productid = p.productid
 GROUP BY f.channel;
 GO
-
 EXEC sp_add_view_description 
     '005_vw_channel_performance',
-    'Compares Online, In‑Store, Mobile App, Phone Order on average basket, margin, delivery days, return rate.';
+    'Key metrics per channel.';
 GO
 
--- =====================================================================
--- VIEW 006: Seasonal category revenue by month
--- =====================================================================
+-- ==========================================================================
+-- 006: Seasonal category revenue
+-- ==========================================================================
 CREATE VIEW dbo.[006_vw_seasonal_category_revenue]
 AS
 SELECT
@@ -256,15 +243,14 @@ JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0
 GROUP BY d.monthnumber, d.monthname, p.category;
 GO
-
 EXEC sp_add_view_description 
     '006_vw_seasonal_category_revenue',
-    'Identifies peak months for each product category, useful for inventory and marketing planning.';
+    'Revenue by category and month for seasonality analysis.';
 GO
 
--- =====================================================================
--- VIEW 007: Store performance by region and store type
--- =====================================================================
+-- ==========================================================================
+-- 007: Store performance by region/type
+-- ==========================================================================
 CREATE VIEW dbo.[007_vw_store_performance_by_region_type]
 AS
 SELECT
@@ -282,15 +268,14 @@ INNER JOIN dbo.dimproduct p ON f.productid = p.productid
 WHERE f.isreturn = 0
 GROUP BY s.region, s.type;
 GO
-
 EXEC sp_add_view_description 
     '007_vw_store_performance_by_region_type',
-    'Evaluates store performance by region and type (Supermarket, Hypermarket, etc.) using revenue, margin, rating.';
+    'Store performance aggregated by region and type.';
 GO
 
--- =====================================================================
--- VIEW 008: Pareto margin analysis (80/20 rule)
--- =====================================================================
+-- ==========================================================================
+-- 008: Pareto margin analysis
+-- ==========================================================================
 CREATE VIEW dbo.[008_vw_pareto_margin_analysis]
 AS
 WITH product_margin AS (
@@ -318,15 +303,14 @@ SELECT
 FROM running
 WHERE running_pct <= 0.8;
 GO
-
 EXEC sp_add_view_description 
     '008_vw_pareto_margin_analysis',
-    'Applies 80/20 rule: how many products contribute 80% of total margin.';
+    'How many products contribute 80% of total margin.';
 GO
 
--- =====================================================================
--- VIEW 009: Delivery speed impact on returns (online/mobile only)
--- =====================================================================
+-- ==========================================================================
+-- 009: Delivery speed impact on returns
+-- ==========================================================================
 CREATE VIEW dbo.[009_vw_delivery_speed_impact]
 AS
 WITH delivery_groups AS (
@@ -355,15 +339,14 @@ SELECT
 FROM delivery_groups
 GROUP BY channel, category, delivery_speed;
 GO
-
 EXEC sp_add_view_description 
     '009_vw_delivery_speed_impact',
-    'For online/mobile orders: shows return rate for fast (1‑2d), standard (3‑5d), long (>5d) delivery.';
+    'Return rate by delivery speed for online channels.';
 GO
 
--- =====================================================================
--- VIEW 010: Warranty and eco-friendly impact
--- =====================================================================
+-- ==========================================================================
+-- 010: Warranty and eco-friendly impact
+-- ==========================================================================
 CREATE VIEW dbo.[010_vw_warranty_eco_impact]
 AS
 SELECT
@@ -377,15 +360,14 @@ FROM dbo.factsales f
 INNER JOIN dbo.dimproduct p ON f.productid = p.productid
 GROUP BY p.haswarranty, p.ecofriendly;
 GO
-
 EXEC sp_add_view_description 
     '010_vw_warranty_eco_impact',
-    'Compares products with/without warranty and eco‑friendly certification on average revenue, return rate, buyers.';
+    'Impact of warranty and eco certification on sales and returns.';
 GO
 
--- =====================================================================
--- NEW VIEW 011: Hourly sales and margin analysis
--- =====================================================================
+-- ==========================================================================
+-- 011: Hourly sales and margin analysis (margin as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[011_vw_hourly_sales_margin_analysis]
 AS
 WITH hourly_data AS (
@@ -410,22 +392,21 @@ SELECT
     items_sold,
     ROUND(revenue, 2) AS revenue,
     ROUND(gross_margin, 2) AS gross_margin,
-    ROUND(gross_margin / NULLIF(revenue, 0), 4) AS margin_pct,
+    ROUND(gross_margin / NULLIF(revenue, 0) * 100, 2) AS margin_pct,   -- percent
     return_rate,
     avg_delivery_days,
     RANK() OVER (PARTITION BY channel ORDER BY revenue DESC) AS revenue_rank_in_channel
 FROM hourly_data
 WHERE hour IS NOT NULL;
 GO
-
 EXEC sp_add_view_description 
     '011_vw_hourly_sales_margin_analysis',
-    'Reveals which hours of the day generate highest revenue and margin per channel (e.g., peak shopping hours).';
+    'Hourly breakdown of sales and margin (percent) per channel.';
 GO
 
--- =====================================================================
--- NEW VIEW 012: Pareto revenue & margin combined
--- =====================================================================
+-- ==========================================================================
+-- 012: Pareto revenue & margin combined
+-- ==========================================================================
 CREATE VIEW dbo.[012_vw_pareto_revenue_margin]
 AS
 WITH product_aggregates AS (
@@ -457,15 +438,14 @@ SELECT
 FROM running_totals
 WHERE running_revenue / total_revenue <= 0.8 OR running_margin / total_margin <= 0.8;
 GO
-
 EXEC sp_add_view_description 
     '012_vw_pareto_revenue_margin',
-    'Compares number of products needed for 80% of revenue vs 80% of margin – often different sets.';
+    'Pareto analysis for revenue and margin – how many products drive 80% of each.';
 GO
 
--- =====================================================================
--- NEW VIEW 013: Basket analysis – frequently bought together
--- =====================================================================
+-- ==========================================================================
+-- 013: Basket analysis – frequently bought together
+-- ==========================================================================
 CREATE VIEW dbo.[013_vw_basket_analysis]
 AS
 WITH basket_pairs AS (
@@ -497,15 +477,14 @@ INNER JOIN product_popularity p1 ON pa.product_a = p1.productid
 INNER JOIN product_popularity p2 ON pa.product_b = p2.productid
 ORDER BY pa.co_occurrence DESC;
 GO
-
 EXEC sp_add_view_description 
     '013_vw_basket_analysis',
-    'Finds top 100 product pairs most frequently bought together (cross‑selling opportunities).';
+    'Top 100 product pairs bought together (cross‑sell opportunities).';
 GO
 
--- =====================================================================
--- NEW VIEW 014: Detailed delivery speed impact on margin (NO ORDER BY inside view)
--- =====================================================================
+-- ==========================================================================
+-- 014: Detailed delivery speed impact on margin (margin as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[014_vw_delivery_speed_impact_detailed]
 AS
 WITH delivery_stats AS (
@@ -541,19 +520,18 @@ SELECT
     ROUND(1.0 * returns / NULLIF(orders, 0), 4) AS return_rate,
     avg_order_value,
     avg_margin,
-    ROUND(avg_margin / NULLIF(avg_order_value, 0), 4) AS margin_pct,
+    ROUND(avg_margin / NULLIF(avg_order_value, 0) * 100, 2) AS margin_pct,   -- percent
     avg_shipcost
 FROM delivery_stats;
 GO
-
 EXEC sp_add_view_description 
     '014_vw_delivery_speed_impact_detailed',
-    'Extends view 009 by including margin percentage and shipping cost per delivery speed category.';
+    'Delivery speed impact with margin percentage.';
 GO
 
--- =====================================================================
--- NEW VIEW 015: Margin by price tier and category (NO ORDER BY inside view)
--- =====================================================================
+-- ==========================================================================
+-- 015: Margin by price tier and category (using dim_product margin_pct as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[015_vw_margin_by_price_tier]
 AS
 WITH price_tiers AS (
@@ -569,7 +547,7 @@ WITH price_tiers AS (
         SUM(f.qty) AS total_qty,
         SUM(f.grossvalue - f.discountamount) AS revenue,
         SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS total_margin,
-        ROUND(AVG((p.unitprice - p.unitcost) / NULLIF(p.unitprice, 0)), 4) AS avg_product_margin_pct
+        AVG(p.margin_pct) AS avg_product_margin_pct   -- already percent (e.g., 25.00)
     FROM dbo.factsales f
     INNER JOIN dbo.dimproduct p ON f.productid = p.productid
     WHERE f.isreturn = 0
@@ -589,20 +567,19 @@ SELECT
     total_qty,
     ROUND(revenue, 2) AS revenue,
     ROUND(total_margin, 2) AS total_margin,
-    ROUND(total_margin / NULLIF(revenue, 0), 4) AS achieved_margin_pct,
+    ROUND(total_margin / NULLIF(revenue, 0) * 100, 2) AS achieved_margin_pct,   -- percent
     avg_product_margin_pct,
-    ROUND(avg_product_margin_pct - (total_margin / NULLIF(revenue, 0)), 4) AS margin_deviation
+    ROUND(avg_product_margin_pct - (total_margin / NULLIF(revenue, 0) * 100), 2) AS margin_deviation
 FROM price_tiers;
 GO
-
 EXEC sp_add_view_description 
     '015_vw_margin_by_price_tier',
-    'Breaks down margin percentage by price tier (Budget, Mid, Premium, Luxury) and category.';
+    'Margin (percent) by price tier and category, comparing built‑in margin vs. achieved.';
 GO
 
--- =====================================================================
--- NEW VIEW 016: Recency impact on spend
--- =====================================================================
+-- ==========================================================================
+-- 016: Recency impact on spend (margin as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[016_vw_recency_impact_on_spend]
 AS
 WITH customer_last_purchase AS (
@@ -641,21 +618,20 @@ SELECT
     COUNT(DISTINCT r.customerid) AS customers,
     AVG(fp.order_value) AS avg_order_value,
     AVG(fp.order_margin) AS avg_order_margin,
-    ROUND(AVG(fp.order_margin) / NULLIF(AVG(fp.order_value), 0), 4) AS avg_margin_pct,
+    ROUND(AVG(fp.order_margin) / NULLIF(AVG(fp.order_value), 0) * 100, 2) AS avg_margin_pct,   -- percent
     COUNT(fp.salesid) / COUNT(DISTINCT r.customerid) AS avg_orders_per_customer
 FROM recency_groups r
 LEFT JOIN future_purchases fp ON r.customerid = fp.customerid
 GROUP BY r.recency_segment;
 GO
-
 EXEC sp_add_view_description 
     '016_vw_recency_impact_on_spend',
-    'Groups customers by days since last purchase (Active, Recent, Dormant, Churned) and shows average order value and margin.';
+    'Customer recency groups and their average order value / margin (percent).';
 GO
 
--- =====================================================================
--- NEW VIEW 017: Promotion margin efficiency (NO ORDER BY inside view)
--- =====================================================================
+-- ==========================================================================
+-- 017: Promotion margin efficiency (margin uplift as percent)
+-- ==========================================================================
 CREATE VIEW dbo.[017_vw_promo_margin_efficiency]
 AS
 WITH promo_impact AS (
@@ -663,7 +639,7 @@ WITH promo_impact AS (
         p.promoid,
         p.promoname,
         p.type,
-        p.discount_pct,
+        p.discount_pct,   -- percent
         AVG(f.grossvalue - f.discountamount) AS avg_basket_promo,
         AVG(f.grossvalue - f.discountamount - (f.qty * pr.unitcost)) AS avg_margin_promo,
         COUNT(*) AS transactions_promo,
@@ -693,21 +669,20 @@ SELECT
     pi.avg_margin_promo,
     ROUND(pi.avg_basket_promo - baseline.avg_baseline_basket, 2) AS basket_increase,
     ROUND(pi.avg_margin_promo - baseline.avg_baseline_margin, 2) AS margin_increase,
-    ROUND((pi.avg_margin_promo - baseline.avg_baseline_margin) / NULLIF(baseline.avg_baseline_margin, 0), 4) AS margin_uplift_pct,
+    ROUND((pi.avg_margin_promo - baseline.avg_baseline_margin) / NULLIF(baseline.avg_baseline_margin, 0) * 100, 2) AS margin_uplift_pct,
     ROUND(pi.total_margin_promo / NULLIF(pi.transactions_promo, 0), 2) AS actual_margin_per_txn,
     RANK() OVER (ORDER BY (pi.avg_margin_promo - baseline.avg_baseline_margin) DESC) AS margin_effectiveness_rank
 FROM promo_impact pi
 CROSS JOIN baseline;
 GO
-
 EXEC sp_add_view_description 
     '017_vw_promo_margin_efficiency',
-    'Ranks promotions by margin uplift (not just revenue increase) – identifies promotions that are profitable.';
+    'Ranks promotions by margin uplift (percentage). Identifies truly profitable promotions.';
 GO
 
--- =====================================================================
--- Final: Display all views with their descriptions (from extended properties)
--- =====================================================================
+-- ==========================================================================
+-- Final: list views with descriptions
+-- ==========================================================================
 SELECT 
     s.name AS schema_name,
     v.name AS view_name,
@@ -722,11 +697,9 @@ WHERE v.name LIKE '[0-9][0-9][0-9]_vw_%' OR v.name LIKE '[0-9][0-9][0-9][0-9]_vw
 ORDER BY v.name;
 GO
 
--- Clean up helper procedure (optional)
 DROP PROCEDURE IF EXISTS sp_add_view_description;
 GO
 
 PRINT '============================================================';
-PRINT 'All views created successfully with descriptions stored as extended properties.';
-PRINT 'Run the final SELECT above to see the descriptions again.';
+PRINT 'All views created – margins and discounts stored as percentages.';
 PRINT '============================================================';

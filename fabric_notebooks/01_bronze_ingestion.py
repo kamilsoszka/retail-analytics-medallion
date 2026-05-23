@@ -1,8 +1,11 @@
 # -------------------------------------------------------------------
-# 01_bronze_ingestion
-# Load CSV files into 01_bronze_db with audit columns
-# Compatible with final generator (hour column, promoid=0, returnreason='No return')
-# Optimized: adds file existence check, repartitions fact table for better parallelism
+# 01_bronze_ingestion.py
+# Author: DataGen AI
+# Date: 2026-05-23
+# Purpose: Load CSV files into 01_bronze_db with audit columns.
+#          Tables are dropped before creation (clean start).
+# Compatible with final generator: hour, promoid=0, returnreason='No return'
+# Optimized: file existence check, repartitioning of fact table.
 # -------------------------------------------------------------------
 
 from pyspark.sql import SparkSession
@@ -11,30 +14,26 @@ from notebookutils import mssparkutils
 
 spark = SparkSession.builder.getOrCreate()
 
-# Use backticks because schema names start with a digit
 bronze_schema = "`01_bronze_db`"
 spark.sql(f"CREATE DATABASE IF NOT EXISTS {bronze_schema}")
-
-# Ensure other schemas exist
 spark.sql("CREATE DATABASE IF NOT EXISTS `02_silver_db`")
 spark.sql("CREATE DATABASE IF NOT EXISTS `03_gold_db`")
 
-# Drop existing bronze tables to avoid conflicts (clean start)
-existing = spark.sql(f"SHOW TABLES IN {bronze_schema}").collect()
-for t in existing:
-    spark.sql(f"DROP TABLE IF EXISTS {bronze_schema}.{t.tableName}")
+# Drop existing bronze tables to ensure clean overwrite
+existing_tables = spark.sql(f"SHOW TABLES IN {bronze_schema}").collect()
+for row in existing_tables:
+    spark.sql(f"DROP TABLE IF EXISTS {bronze_schema}.{row.tableName}")
 
-# CSV files – note: no dim_manager.csv (generator doesn't produce it)
-csv_files = [
-    ("raw/dim_date.csv",        "bronze_dimdate"),
-    ("raw/dim_customer.csv",    "bronze_dimcustomer"),
-    ("raw/dim_product.csv",     "bronze_dimproduct"),
-    ("raw/dim_store.csv",       "bronze_dimstore"),
-    ("raw/dim_promotion.csv",   "bronze_dimpromotion"),
-    ("raw/fact_sales.csv",      "bronze_factsales")
+csv_mapping = [
+    ("raw/dim_date.csv",       "bronze_dimdate"),
+    ("raw/dim_customer.csv",   "bronze_dimcustomer"),
+    ("raw/dim_product.csv",    "bronze_dimproduct"),
+    ("raw/dim_store.csv",      "bronze_dimstore"),
+    ("raw/dim_promotion.csv",  "bronze_dimpromotion"),
+    ("raw/fact_sales.csv",     "bronze_factsales"),
 ]
 
-for csv_path, table_name in csv_files:
+for csv_path, table_name in csv_mapping:
     full_path = f"Files/{csv_path}"
     if not mssparkutils.fs.exists(full_path):
         print(f"File not found: {full_path}")
@@ -43,20 +42,19 @@ for csv_path, table_name in csv_files:
     # Read CSV with header and schema inference
     df = spark.read.option("header", "true").option("inferSchema", "true").csv(full_path)
 
-    # Add audit columns
+    # Add audit columns for lineage tracking
     df = df.withColumn("_source_file", input_file_name()) \
            .withColumn("_ingestion_ts", current_timestamp()) \
            .withColumn("_file_name", lit(csv_path))
 
-    # Repartition the large fact table for better write performance
+    # Optimize large fact table by partitioning on datekey if present
     if "fact" in table_name:
-        # Use datekey for partitioning if available, else a fixed number
         if "datekey" in df.columns:
             df = df.repartition("datekey")
         else:
-            df = df.repartition(20)   # 20 partitions for 10M rows
+            df = df.repartition(20)
 
-    # Write as Delta table (overwrite mode)
+    # Overwrite target Delta table
     df.write.format("delta").mode("overwrite").saveAsTable(f"{bronze_schema}.{table_name}")
 
     row_count = df.count()

@@ -1,9 +1,8 @@
 # -------------------------------------------------------------------
-# 04_optimization
-# Optimize Delta tables in bronze, silver, and gold layers
-# - Compaction (bin-packing) for tables with >20 files
-# - Z‑ordering on frequently filtered columns (datekey, productid, etc.)
-# - Optional vacuum (retention 168 hours)
+# 04_optimization.py
+# Author: DataGen AI
+# Date: 2026-05-23
+# Purpose: Compaction and Z-ordering of Delta tables across all layers.
 # -------------------------------------------------------------------
 
 from delta.tables import DeltaTable
@@ -12,66 +11,45 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.getOrCreate()
 spark.conf.set("spark.sql.adaptive.enabled", "true")
 
-# Set to True if you want to run VACUUM (removes old files older than 7 days)
-RUN_VACUUM = False
+RUN_VACUUM = False   # set True to remove old files >7 days
 
-def get_zorder_columns(table_name):
-    """Return recommended Z‑order columns based on table name."""
-    name_lower = table_name.lower()
-    if "date" in name_lower:
-        return ["datekey"]
-    elif "customer" in name_lower:
-        return ["customerid"]
-    elif "product" in name_lower:
-        return ["productid", "category"]
-    elif "store" in name_lower:
-        return ["storeid", "region"]
-    elif "promotion" in name_lower or "promo" in name_lower:
-        return ["promoid"]
-    elif "sales" in name_lower or "fact" in name_lower:
-        return ["salesid", "datekey", "productid", "customerid", "storeid"]
-    else:
-        return None
+def zorder_columns(table_name):
+    name = table_name.lower()
+    if "date" in name: return ["datekey"]
+    elif "customer" in name: return ["customerid"]
+    elif "product" in name: return ["productid", "category"]
+    elif "store" in name: return ["storeid", "region"]
+    elif "promo" in name: return ["promoid"]
+    elif "sales" in name or "fact" in name: return ["salesid", "datekey", "productid", "customerid", "storeid"]
+    else: return None
 
-schemas = ["`01_bronze_db`", "`02_silver_db`", "`03_gold_db`"]
-
-for schema in schemas:
-    tables = spark.sql(f"SHOW TABLES IN {schema}").collect()
-    for tbl in tables:
-        full_name = f"{schema}.{tbl.tableName}"
-        print(f"Processing {full_name}")
-
+for schema in ["`01_bronze_db`", "`02_silver_db`", "`03_gold_db`"]:
+    for row in spark.sql(f"SHOW TABLES IN {schema}").collect():
+        full_name = f"{schema}.{row.tableName}"
+        print(f"Optimizing {full_name}")
         try:
-            # Get Delta table location and metadata
-            location_df = spark.sql(f"DESCRIBE DETAIL {full_name}")
-            delta_path = location_df.select("location").collect()[0][0]
-            delta_table = DeltaTable.forPath(spark, delta_path)
-
-            # Get file count from table statistics
-            file_count = spark.sql(f"DESCRIBE DETAIL {full_name}").select("numFiles").collect()[0][0]
-            if file_count > 20:
+            detail = spark.sql(f"DESCRIBE DETAIL {full_name}")
+            loc = detail.select("location").head()[0]
+            files = detail.select("numFiles").head()[0]
+            delta_table = DeltaTable.forPath(spark, loc)
+            if files > 20:
                 delta_table.optimize().executeCompaction()
-                print(f"  ✔ Compacted {full_name} (files: {file_count})")
+                print(f"  Compacted ({files} files)")
             else:
-                print(f"  ⏭ Skipping compaction – only {file_count} files")
+                print(f"  Skipped compaction ({files} files)")
 
-            # Z‑ordering on recommended columns
-            z_cols = get_zorder_columns(tbl.tableName)
-            if z_cols:
-                # Verify columns exist
-                sample_df = spark.table(full_name).limit(1)
-                existing_cols = set(sample_df.columns)
-                valid_cols = [c for c in z_cols if c in existing_cols]
-                if valid_cols:
-                    delta_table.optimize().executeZOrderBy(valid_cols)
-                    print(f"  ✔ Z-ordered {full_name} on {valid_cols}")
+            cols = zorder_columns(row.tableName)
+            if cols:
+                existing_cols = spark.table(full_name).limit(1).columns
+                valid = [c for c in cols if c in existing_cols]
+                if valid:
+                    delta_table.optimize().executeZOrderBy(valid)
+                    print(f"  Z-ordered on {valid}")
 
-            # Vacuum old files (only if enabled)
             if RUN_VACUUM:
-                delta_table.vacuum(168)   # retain 7 days
-                print(f"  ✔ Vacuumed {full_name} (retention 168h)")
-
+                delta_table.vacuum(168)
+                print("  Vacuumed")
         except Exception as e:
-            print(f"  ✘ Error on {full_name}: {e}")
+            print(f"  Error: {e}")
 
 print("Optimization completed.")

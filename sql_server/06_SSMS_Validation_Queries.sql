@@ -1,5 +1,9 @@
 -- =====================================================================
--- 05_silver_gold_validation_TSQL.sql (corrected for retailanalytics)
+-- 05_silver_gold_validation_TSQL.sql
+-- =====================================================================
+-- Author:  AI Assistant
+-- Created: 2026-05-21
+-- Updated: 2026-05-23 (margin_pct range 0‑25%, discount_pct range 0‑100%)
 -- Data quality checks for tables and views in retailanalytics database
 -- Compatible with final schema: promoid=0, hour, returnreason='No return'
 -- =====================================================================
@@ -36,7 +40,7 @@ SELECT
 FROM dbo.factsales
 WHERE isreturn = 0;
 
--- 4. Sample of 10 rows (including hour and returnreason)
+-- 4. Sample of 10 rows
 SELECT TOP 10
     salesid, datekey, productid, customerid, storeid, promoid, 
     qty, unitprice, net, grossvalue, discountamount, taxamount, 
@@ -44,7 +48,7 @@ SELECT TOP 10
 FROM dbo.factsales
 ORDER BY salesid;
 
--- 5. Orphan checks (promoid = 0 is allowed as dummy)
+-- 5. Orphan checks
 SELECT 'missing datekey' AS constraint_name, COUNT(*) 
 FROM dbo.factsales f 
 LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey 
@@ -71,18 +75,18 @@ LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid
 WHERE p.promoid IS NULL
 ORDER BY constraint_name;
 
--- 6. Percentage range checks (margin_pct, tax_rate, discount_pct)
+-- 6. Percentage range checks (corrected)
 SELECT 'margin_pct' AS column_name, COUNT(*) AS out_of_range 
-FROM dbo.dimproduct WHERE margin_pct < 0 OR margin_pct > 1
+FROM dbo.dimproduct WHERE margin_pct < 0 OR margin_pct > 25
 UNION ALL
 SELECT 'tax_rate', COUNT(*) 
 FROM dbo.dimproduct WHERE tax_rate < 0 OR tax_rate > 1
 UNION ALL
 SELECT 'discount_pct', COUNT(*) 
-FROM dbo.dimpromotion WHERE discount_pct < 0 OR discount_pct > 1
+FROM dbo.dimpromotion WHERE discount_pct < 0 OR discount_pct > 100
 ORDER BY column_name;
 
--- 7. Hour column validation (0-23, not null)
+-- 7. Hour column validation
 SELECT 'hour_null' AS check_name, COUNT(*) 
 FROM dbo.factsales WHERE hour IS NULL
 UNION ALL
@@ -99,7 +103,7 @@ UNION ALL
 SELECT 'returnreason_missing_for_return', COUNT(*) 
 FROM dbo.factsales WHERE isreturn = 1 AND returnreason = 'No return';
 
--- 9. Deliverydays integrity (In-Store = 0, others >0)
+-- 9. Deliverydays integrity
 SELECT 'deliverydays_nonzero_for_instore' AS check_name, COUNT(*) 
 FROM dbo.factsales WHERE channel = 'In-Store' AND deliverydays != 0
 UNION ALL

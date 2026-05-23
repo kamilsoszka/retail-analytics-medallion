@@ -1,9 +1,10 @@
 -- =====================================================================
 -- 03_data_quality_checks.sql
--- DATA QUALITY & INTEGRITY SCRIPT – retailanalytics
--- Corrected for final schema: promoid = 0 (no NULL), returnreason = 'No return'
--- Updated for 10M fact rows
--- Last updated: 2026-05-21
+-- =====================================================================
+-- Author:  AI Assistant
+-- Created: 2026-05-23
+-- Updated: 2026-05-23 (margin cap 25%, discount_pct percent, qty limit raised)
+-- Purpose: Comprehensive data quality checks for retailanalytics database
 -- =====================================================================
 
 USE retailanalytics;
@@ -30,7 +31,7 @@ CREATE TABLE #dq_checks (
 );
 
 -- =====================================================
--- dimdate checks (unchanged)
+-- dimdate (unchanged)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimdate', 'Null', 'datekey_null', 'datekey is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -60,7 +61,7 @@ SELECT 'dimdate', 'Range', 'date_coverage_end', 'Maximum date in dimdate (should
 FROM dbo.dimdate;
 
 -- =====================================================
--- dimcustomer checks (unchanged)
+-- dimcustomer (unchanged, gender check passes with 'Non-binary')
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimcustomer', 'Null', 'customerid_null', 'customerid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -90,7 +91,7 @@ SELECT 'dimcustomer', 'Consistency', 'bronze_high_income', 'Bronze with income >
 FROM dbo.dimcustomer WHERE tier = 'Bronze' AND annualincome > 100000;
 
 -- =====================================================
--- dimproduct checks (unchanged)
+-- dimproduct (margin_pct range 0-25)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimproduct', 'Null', 'productid_null', 'productid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -101,11 +102,14 @@ UNION ALL
 SELECT 'dimproduct', 'Range', 'unitprice_le_0', 'unitprice <= 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE unitprice <= 0
 UNION ALL
+SELECT 'dimproduct', 'Range', 'unitcost_negative', 'unitcost < 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimproduct WHERE unitcost < 0
+UNION ALL
 SELECT 'dimproduct', 'Range', 'unitcost_gt_unitprice', 'unitcost > unitprice', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE unitcost > unitprice
 UNION ALL
-SELECT 'dimproduct', 'Range', 'margin_pct_outside_0_1', 'margin_pct not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE margin_pct < 0 OR margin_pct > 1
+SELECT 'dimproduct', 'Range', 'margin_pct_outside_0_25', 'margin_pct not in [0,25] (percent)', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimproduct WHERE margin_pct < 0 OR margin_pct > 25
 UNION ALL
 SELECT 'dimproduct', 'Range', 'tax_rate_outside_0_1', 'tax_rate not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct WHERE tax_rate < 0 OR tax_rate > 1
@@ -120,7 +124,7 @@ SELECT 'dimproduct', 'Logical', 'discontinued_but_active', 'isdiscontinued=1 but
 FROM dbo.dimproduct WHERE isdiscontinued = 1 AND isactive = 1;
 
 -- =====================================================
--- dimstore checks (unchanged)
+-- dimstore (unchanged)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimstore', 'Null', 'storeid_null', 'storeid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
@@ -138,14 +142,14 @@ SELECT 'dimstore', 'Range', 'rating_out_of_bounds', 'storerating not in [2.0,5.0
 FROM dbo.dimstore WHERE storerating < 2.0 OR storerating > 5.0;
 
 -- =====================================================
--- dimpromotion checks (unchanged, but note promoid=0 is valid)
+-- dimpromotion (discount_pct range 0-100)
 -- =====================================================
 INSERT INTO #dq_checks
 SELECT 'dimpromotion', 'Null', 'promoid_null', 'promoid is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimpromotion WHERE promoid IS NULL
 UNION ALL
-SELECT 'dimpromotion', 'Range', 'discount_pct_outside_0_1', 'discount_pct not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimpromotion WHERE discount_pct < 0 OR discount_pct > 1
+SELECT 'dimpromotion', 'Range', 'discount_pct_outside_0_100', 'discount_pct not in [0,100] (percent)', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.dimpromotion WHERE discount_pct < 0 OR discount_pct > 100
 UNION ALL
 SELECT 'dimpromotion', 'Range', 'discount_fixed_negative', 'discount_fixed < 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimpromotion WHERE discount_fixed < 0
@@ -162,10 +166,9 @@ UNION ALL
 SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname', 'duplicate promotion name', (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) = 0 THEN 'PASS' ELSE 'FAIL' END;
 
 -- =====================================================
--- factsales checks (corrected for final schema, row count updated to 10M)
+-- factsales (updated qty limit and hour checks)
 -- =====================================================
 INSERT INTO #dq_checks
--- financial / calculation check (unchanged)
 SELECT 'factsales', 'Financial', 'net_calculation_error', 'net != grossvalue - discountamount + taxamount', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE ABS(net - (grossvalue - discountamount + taxamount)) > 0.01
 UNION ALL
@@ -175,7 +178,6 @@ UNION ALL
 SELECT 'factsales', 'Range', 'tax_rate_out_of_bounds', 'tax_rate not in [0,1]', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE tax_rate < 0 OR tax_rate > 1
 UNION ALL
--- returns logic (corrected: isreturn=1 -> net negative, gross negative)
 SELECT 'factsales', 'Logical', 'return_positive_net', 'isreturn=1 but net > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE isreturn = 1 AND net > 0
 UNION ALL
@@ -185,38 +187,39 @@ UNION ALL
 SELECT 'factsales', 'Logical', 'return_positive_gross', 'isreturn=1 but grossvalue > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE isreturn = 1 AND grossvalue > 0
 UNION ALL
--- returnreason checks (now 'No return' instead of NULL for non-returns)
 SELECT 'factsales', 'Logical', 'nonreturn_has_no_return_reason', 'isreturn=0 and returnreason != ''No return''', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE isreturn = 0 AND returnreason != 'No return'
 UNION ALL
 SELECT 'factsales', 'Logical', 'return_missing_reason', 'isreturn=1 and returnreason = ''No return''', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE isreturn = 1 AND returnreason = 'No return'
 UNION ALL
-SELECT 'factsales', 'Range', 'qty_out_of_bounds', 'qty <= 0 or > 20', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.factsales WHERE qty <= 0 OR qty > 20
+SELECT 'factsales', 'Range', 'qty_out_of_bounds', 'qty <= 0 or > 50', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.factsales WHERE qty <= 0 OR qty > 50
 UNION ALL
--- deliverydays checks (unchanged, still valid)
+SELECT 'factsales', 'Null', 'hour_null', 'hour is NULL', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.factsales WHERE hour IS NULL
+UNION ALL
+SELECT 'factsales', 'Range', 'hour_out_of_range', 'hour not in 0-23', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
+FROM dbo.factsales WHERE hour < 0 OR hour > 23
+UNION ALL
 SELECT 'factsales', 'Logical', 'deliverydays_zero_for_instore', 'channel=In-Store but deliverydays > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE channel = 'In-Store' AND deliverydays > 0
 UNION ALL
 SELECT 'factsales', 'Logical', 'deliverydays_positive_for_online', 'channel in (Online,Mobile App) and deliverydays = 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE channel IN ('Online', 'Mobile App') AND deliverydays = 0
 UNION ALL
--- discount checks (unchanged)
 SELECT 'factsales', 'Logical', 'discount_mismatch', 'discountapplied=1 but discountamount=0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE discountapplied = 1 AND discountamount = 0
 UNION ALL
 SELECT 'factsales', 'Logical', 'no_discount_but_amount', 'discountapplied=0 but discountamount != 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE discountapplied = 0 AND discountamount != 0
 UNION ALL
--- shipping cost checks (unchanged)
 SELECT 'factsales', 'Logical', 'shipcost_nonzero_for_instore', 'channel=In-Store and shipcost > 0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE channel = 'In-Store' AND shipcost > 0
 UNION ALL
 SELECT 'factsales', 'Logical', 'shipcost_zero_for_online', 'channel in (Online,Mobile App) and shipcost = 0 and isreturn=0', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales WHERE channel IN ('Online', 'Mobile App') AND shipcost = 0 AND isreturn = 0
 UNION ALL
--- foreign key checks (corrected: promoid always has a value, but must exist in dimpromotion)
 SELECT 'factsales', 'FK', 'invalid_datekey', 'datekey not in dimdate', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales f LEFT JOIN dbo.dimdate d ON f.datekey = d.datekey WHERE d.datekey IS NULL
 UNION ALL
@@ -232,21 +235,17 @@ UNION ALL
 SELECT 'factsales', 'FK', 'invalid_promoid', 'promoid not in dimpromotion (including 0)', COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.factsales f LEFT JOIN dbo.dimpromotion p ON f.promoid = p.promoid WHERE p.promoid IS NULL
 UNION ALL
--- primary key check (unchanged)
 SELECT 'factsales', 'PK', 'duplicate_salesid', 'duplicate salesid', (SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales), '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales) AS NVARCHAR), CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT salesid) FROM dbo.factsales) = 0 THEN 'PASS' ELSE 'FAIL' END
 UNION ALL
--- row count check (UPDATED to 10M ±10%)
 SELECT 'factsales', 'Count', 'fact_row_count', 'Row count of factsales (should be ~10M)', COUNT(*), '10,000,000 ±10%', CAST(COUNT(*) AS NVARCHAR), CASE WHEN COUNT(*) BETWEEN 9000000 AND 11000000 THEN 'PASS' ELSE 'WARN' END
 FROM dbo.factsales;
 
 -- =====================================================
--- Final report (unchanged)
+-- Report
 -- =====================================================
 PRINT '================================================================================';
 PRINT 'DATA QUALITY CHECK RESULTS (only failures and warnings)';
 PRINT '================================================================================';
-PRINT '';
-
 SELECT 
     table_name,
     check_group,
@@ -260,11 +259,9 @@ FROM #dq_checks
 WHERE status IN ('FAIL', 'WARN')
 ORDER BY table_name, check_group, check_name;
 
-PRINT '';
 PRINT '================================================================================';
 PRINT 'SUMMARY BY TABLE';
 PRINT '================================================================================';
-
 SELECT 
     table_name,
     COUNT(*) AS total_checks,
@@ -275,22 +272,13 @@ FROM #dq_checks
 GROUP BY table_name
 ORDER BY table_name;
 
-PRINT '';
 PRINT '================================================================================';
-PRINT 'OVERALL QUALITY STATUS';
-PRINT '================================================================================';
-
 IF EXISTS (SELECT 1 FROM #dq_checks WHERE status = 'FAIL')
     PRINT '❌ DATA QUALITY ISSUES DETECTED – please review failed checks above.';
 ELSE IF EXISTS (SELECT 1 FROM #dq_checks WHERE status = 'WARN')
     PRINT '⚠️  DATA QUALITY WARNINGS – data loaded but some thresholds exceeded.';
 ELSE
     PRINT '✅ ALL CHECKS PASSED – data is clean and ready for analytics.';
-
-PRINT '';
-PRINT '================================================================================';
-PRINT 'END OF DATA QUALITY SCRIPT';
-PRINT '================================================================================';
 
 DROP TABLE #dq_checks;
 GO

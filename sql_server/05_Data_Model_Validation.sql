@@ -1,13 +1,10 @@
 -- =====================================================================
 -- MODEL VALIDATION (compatible with final schema)
--- Last updated: 2026-05-21 (adapted for 10M rows, hour column)
 -- =====================================================================
+-- Author:  AI Assistant
+-- Created: 2026-05-21
+-- Updated: 2026-05-23 (comments updated for 25% margin, percent storage)
 -- Purpose: Validate star schema design, referential integrity, and performance
--- Requirements:
---   - factsales has foreign keys to all 5 dimensions
---   - No orphan rows (promoid=0 is allowed as dummy)
---   - Clustered columnstore index on factsales
---   - All dimension tables have primary keys
 -- =====================================================================
 
 USE retailanalytics;
@@ -18,7 +15,6 @@ SET NOCOUNT ON;
 PRINT '================================================================================';
 PRINT 'MODEL VALIDATION – retailanalytics';
 PRINT '================================================================================';
-PRINT '';
 
 DROP TABLE IF EXISTS #model_checks;
 CREATE TABLE #model_checks (
@@ -56,7 +52,7 @@ WHERE object_id = OBJECT_ID('dbo.factsales')
 -- 3. All five core dimension tables have a primary key
 INSERT INTO #model_checks
 SELECT 'dimension_keys',
-       'all five dimension tables (dimdate, dimproduct, dimcustomer, dimstore, dimpromotion) have a primary key',
+       'all five dimension tables have a primary key',
        CASE WHEN COUNT(DISTINCT parent_object_id) = 5 THEN 'OK' ELSE 'ISSUE' END,
        COUNT(DISTINCT parent_object_id)
 FROM sys.key_constraints
@@ -64,7 +60,7 @@ WHERE type = 'PK' AND parent_object_id IN (OBJECT_ID('dbo.dimdate'), OBJECT_ID('
                                            OBJECT_ID('dbo.dimcustomer'), OBJECT_ID('dbo.dimstore'),
                                            OBJECT_ID('dbo.dimpromotion'));
 
--- 4. Performance: factsales should have a clustered columnstore index (created in loader)
+-- 4. Performance: factsales should have a clustered columnstore index
 INSERT INTO #model_checks
 SELECT 'performance',
        'factsales has a clustered columnstore index (recommended for large fact tables)',
@@ -73,7 +69,7 @@ SELECT 'performance',
 FROM sys.indexes
 WHERE object_id = OBJECT_ID('dbo.factsales') AND type_desc = 'CLUSTERED COLUMNSTORE';
 
--- 5. Referential integrity: no orphan rows (promoid = 0 is allowed as a valid reference)
+-- 5. Referential integrity: no orphan rows (promoid = 0 is allowed as dummy)
 INSERT INTO #model_checks
 SELECT 'referential_integrity',
        'no orphan rows in factsales (all foreign keys have matching dimension records; promoid = 0 refers to dummy "No Promotion" row)',
@@ -89,7 +85,7 @@ FROM (
     LEFT JOIN dbo.dimpromotion pr ON f.promoid = pr.promoid
     WHERE d.datekey IS NULL OR p.productid IS NULL OR c.customerid IS NULL
        OR s.storeid IS NULL
-       OR pr.promoid IS NULL   -- promoid always has a value (0 or valid), NULL means missing in dimpromotion
+       OR pr.promoid IS NULL
 ) AS orphan_check;
 
 -- Final report

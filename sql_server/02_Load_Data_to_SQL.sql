@@ -1,13 +1,12 @@
 -- =====================================================================
 -- final_retail_loader.sql
 -- =====================================================================
--- Author:       AI Assistant (Enhanced per requirements)
--- Last modified: 2026-05-21 14:30:00 UTC
--- Purpose:      Load retail data (10M rows) into SQL Server (retailanalytics)
---               - Forces storename non-NULL, deliverydays=0 for In-Store
---               - Ensures promoid=0, returnreason='No return', hour NOT NULL
---               - Product margin already enforced at generation (<=20%)
---               - Optimized for large volume (10M fact rows)
+-- Author: DataGen AI, Date: 2026-05-23
+-- Purpose: Load retail data (10M rows) into SQL Server (retailanalytics)
+--   - Forces storename non‑NULL, deliverydays=0 for In‑Store
+--   - Ensures promoid=0, returnreason='No return', hour NOT NULL
+--   - Product margin enforced at generation (≤25% stored as percentage)
+--   - Optimised for large volume (10M fact rows)
 -- =====================================================================
 
 USE master;
@@ -57,7 +56,7 @@ PRINT '  -> Old objects dropped.';
 GO
 
 PRINT '============================================================';
-PRINT 'STEP 2: Create tables (including hour column)';
+PRINT 'STEP 2: Create tables (including hour column, margin_pct as percent)';
 PRINT '============================================================';
 
 CREATE TABLE dbo.dimdate (
@@ -115,7 +114,7 @@ CREATE TABLE dbo.dimproduct (
     brand NVARCHAR(50) NOT NULL,
     unitcost DECIMAL(18,2) NOT NULL,
     unitprice DECIMAL(18,2) NOT NULL,
-    margin_pct DECIMAL(5,4) NOT NULL,
+    margin_pct DECIMAL(5,2) NOT NULL,      -- percentage, e.g. 25.00 for 25%
     weight DECIMAL(10,2) NOT NULL,
     color NVARCHAR(20) NOT NULL,
     material NVARCHAR(50) NOT NULL,
@@ -160,7 +159,7 @@ GO
 CREATE TABLE dbo.dimpromotion (
     promoid INT NOT NULL,
     promoname NVARCHAR(150) NOT NULL,
-    discount_pct DECIMAL(5,3) NOT NULL,
+    discount_pct DECIMAL(5,2) NOT NULL,    -- percentage, e.g. 25.00 for 25%
     discount_fixed DECIMAL(10,2) NOT NULL,
     type NVARCHAR(50) NOT NULL,
     isactive TINYINT NOT NULL,
@@ -253,10 +252,7 @@ GO
 -- =====================================================================
 -- STEP 4: Load dim_customer
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 4: Load dim_customer from CSV';
-PRINT '============================================================';
-
 DROP TABLE IF EXISTS #stg_customer;
 CREATE TABLE #stg_customer (
     customerid NVARCHAR(50), fullname NVARCHAR(100), email NVARCHAR(100),
@@ -303,12 +299,9 @@ PRINT '  -> dim_customer loaded.';
 GO
 
 -- =====================================================================
--- STEP 5: Load dim_product (margin_pct already <=20%)
+-- STEP 5: Load dim_product (margin_pct ≤ 25.00%)
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 5: Load dim_product from CSV';
-PRINT '============================================================';
-
 DROP TABLE IF EXISTS #stg_product;
 CREATE TABLE #stg_product (
     productid NVARCHAR(50), name NVARCHAR(150), category NVARCHAR(50),
@@ -331,7 +324,7 @@ SELECT
     ISNULL(brand, 'Generic'),
     ISNULL(TRY_CAST(unitcost AS DECIMAL(18,2)), 0),
     ISNULL(TRY_CAST(unitprice AS DECIMAL(18,2)), 0),
-    ISNULL(TRY_CAST(margin_pct AS DECIMAL(5,4)), 0),
+    ISNULL(TRY_CAST(margin_pct AS DECIMAL(5,2)), 0),
     ISNULL(TRY_CAST(weight AS DECIMAL(10,2)), 1),
     ISNULL(color, 'White'),
     ISNULL(material, 'Plastic'),
@@ -356,12 +349,9 @@ PRINT '  -> dim_product loaded.';
 GO
 
 -- =====================================================================
--- STEP 6: Load dim_store (storename forced non-NULL/non-empty)
+-- STEP 6: Load dim_store (storename forced non‑NULL)
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 6: Load dim_store from CSV';
-PRINT '============================================================';
-
 DROP TABLE IF EXISTS #stg_store;
 CREATE TABLE #stg_store (
     storeid NVARCHAR(50), storename NVARCHAR(150), city NVARCHAR(50),
@@ -378,14 +368,14 @@ WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65
 INSERT INTO dbo.dimstore
 SELECT
     TRY_CAST(storeid AS INT),
-    ISNULL(NULLIF(storename, ''), 'Unknown Store') AS storename,
-    ISNULL(NULLIF(city, ''), 'Unknown') AS city,
-    ISNULL(NULLIF(type, ''), 'Supermarket') AS type,
+    ISNULL(NULLIF(storename, ''), 'Unknown Store'),
+    ISNULL(NULLIF(city, ''), 'Unknown'),
+    ISNULL(NULLIF(type, ''), 'Supermarket'),
     ISNULL(TRY_CAST(staff AS SMALLINT), 10),
     ISNULL(TRY_CAST(sizem2 AS INT), 1000),
     ISNULL(TRY_CAST(hascafe AS TINYINT), 0),
     ISNULL(TRY_CAST(openingyear AS SMALLINT), 2000),
-    ISNULL(NULLIF(region, ''), 'Central') AS region,
+    ISNULL(NULLIF(region, ''), 'Central'),
     ISNULL(TRY_CAST(renovationyear AS SMALLINT), 0),
     ISNULL(TRY_CAST(parkingspots AS SMALLINT), 50),
     ISNULL(TRY_CAST(storerating AS DECIMAL(3,1)), 3.0),
@@ -401,12 +391,9 @@ PRINT '  -> dim_store loaded.';
 GO
 
 -- =====================================================================
--- STEP 7: Load dim_promotion (including dummy promoid=0)
+-- STEP 7: Load dim_promotion (dummy promoid=0 included, discount_pct as percent)
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 7: Load dim_promotion from CSV';
-PRINT '============================================================';
-
 DROP TABLE IF EXISTS #stg_promo;
 CREATE TABLE #stg_promo (
     promoid NVARCHAR(50), promoname NVARCHAR(150), discount_pct NVARCHAR(50),
@@ -423,7 +410,7 @@ INSERT INTO dbo.dimpromotion
 SELECT
     TRY_CAST(promoid AS INT),
     ISNULL(promoname, 'Unknown Promotion'),
-    ISNULL(TRY_CAST(discount_pct AS DECIMAL(5,3)), 0),
+    ISNULL(TRY_CAST(discount_pct AS DECIMAL(5,2)), 0),
     ISNULL(TRY_CAST(discount_fixed AS DECIMAL(10,2)), 0),
     ISNULL(type, 'None'),
     ISNULL(TRY_CAST(isactive AS TINYINT), 0),
@@ -452,12 +439,9 @@ PRINT '  -> dim_promotion loaded.';
 GO
 
 -- =====================================================================
--- STEP 8: Load fact_sales (10M rows with hour column, no NULLs)
+-- STEP 8: Load fact_sales (10M rows, hour column, no NULLs)
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 8: Load fact_sales from CSV (10M rows)';
-PRINT '============================================================';
-
 DROP TABLE IF EXISTS #stg_fact;
 CREATE TABLE #stg_fact (
     salesid NVARCHAR(50), datekey NVARCHAR(50), productid NVARCHAR(50),
@@ -505,9 +489,7 @@ GO
 -- =====================================================================
 -- STEP 9: Add primary keys and foreign keys
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 9: Add primary keys and foreign keys';
-PRINT '============================================================';
 
 ALTER TABLE dbo.dimdate ADD CONSTRAINT pk_dimdate PRIMARY KEY (datekey);
 ALTER TABLE dbo.dimcustomer ADD CONSTRAINT pk_dimcustomer PRIMARY KEY (customerid);
@@ -531,11 +513,9 @@ PRINT '  -> Primary and foreign keys added.';
 GO
 
 -- =====================================================================
--- STEP 10: Create additional indexes
+-- STEP 10: Additional indexes
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 10: Create additional indexes';
-PRINT '============================================================';
 
 CREATE NONCLUSTERED INDEX ix_dimdate_year_month ON dbo.dimdate (year, monthnumber) INCLUDE (fulldate, isweekend, isholiday);
 CREATE NONCLUSTERED INDEX ix_dimcustomer_tier_city ON dbo.dimcustomer (tier, city) INCLUDE (loyaltysegment, isactive, annualincome);
@@ -551,9 +531,7 @@ GO
 -- =====================================================================
 -- STEP 11: Update statistics
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 11: Update statistics';
-PRINT '============================================================';
 
 UPDATE STATISTICS dbo.dimdate WITH FULLSCAN;
 UPDATE STATISTICS dbo.dimcustomer WITH FULLSCAN;
@@ -567,9 +545,7 @@ GO
 -- =====================================================================
 -- STEP 12: Create views
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'STEP 12: Create views';
-PRINT '============================================================';
 GO
 
 CREATE VIEW dbo.vw_dates AS SELECT * FROM dbo.dimdate;
@@ -591,9 +567,7 @@ GO
 -- =====================================================================
 -- STEP 13: Show row counts
 -- =====================================================================
-PRINT '============================================================';
 PRINT 'FINAL STEP: Row counts';
-PRINT '============================================================';
 
 SELECT 'dimdate' AS table_name, COUNT(*) FROM dbo.dimdate UNION ALL
 SELECT 'dimcustomer', COUNT(*) FROM dbo.dimcustomer UNION ALL
@@ -605,12 +579,9 @@ GO
 
 PRINT '============================================================';
 PRINT '✅ Database retailanalytics loaded successfully.';
-PRINT '   - No NULL values in any column (storename, promoid, returnreason, hour).';
-PRINT '   - In-Store deliverydays = 0.';
-PRINT '   - Trend: decline (60k->50k) then flat then strong rise (50k->95k) at end.';
-PRINT '   - Product margins enforced at generation (<=20%).';
+PRINT '   - No NULL values in any column.';
+PRINT '   - In‑Store deliverydays = 0.';
+PRINT '   - Trend: decline → flat → strong rise to 95k.';
+PRINT '   - Product margins ≤ 25% (stored as percentage).';
 PRINT '   - Total fact rows: 10 million (expected).';
-PRINT '============================================================';
-PRINT 'Last modification: 2026-05-21 14:30:00 UTC';
-PRINT 'Author: AI Assistant (Enhanced per requirements)';
 PRINT '============================================================';
