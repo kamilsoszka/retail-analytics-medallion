@@ -1,3 +1,9 @@
+
+---
+
+### `docs/DOCUMENTATION.md` (podfolder `docs`)
+
+```markdown
 # Retail Analytics – Complete Documentation (Final)
 
 ## Project Overview
@@ -264,21 +270,6 @@ Each business question is answered with T‑SQL, DAX, and Python (pandas) exampl
 ### 11. 7‑day moving average of daily sales
 **T‑SQL:**
 ```sql
-WITH daily AS (
-  SELECT d.fulldate, SUM(f.net) AS daily_total
-  FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey
-  WHERE f.isreturn = 0
-  GROUP BY d.fulldate
-)
-SELECT fulldate,
-       FORMAT(daily_total, 'N0') AS daily_total,
-       FORMAT(AVG(daily_total) OVER (ORDER BY fulldate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 'N0') AS ma_7days
-FROM daily ORDER BY fulldate;
-
-11. 7‑day moving average of daily sales
-T‑SQL:
-
-sql
 WITH daily AS (
   SELECT d.fulldate, SUM(f.net) AS daily_total
   FROM dbo.factsales f JOIN dbo.dimdate d ON f.datekey = d.datekey

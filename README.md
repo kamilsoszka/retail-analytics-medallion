@@ -19,7 +19,7 @@ Script `final_retail_gen.py` creates six CSV files:
 **Key improvements in the generator (v3):**
 - Daily net‑sales targets are met by **scaling quantities**, not monetary values – this preserves product margins in the fact table and avoids inflated negative margins.
 - `discountapplied` flag is now set **after** rounding `discountamount`, eliminating spurious mismatches.
-- Gender strings use only `Male`/`Female` (standard ASCII), ensuring consistency with SQL validation checks.
+- Gender strings use only `Male`/`Female`, ensuring consistency with SQL validation checks.
 - All percentage columns (`margin_pct`, `discount_pct`) are exported as decimal fractions (e.g. `0.1196`), which Power BI automatically displays as `11.96%` when formatted as percentage.
 - Product margins follow a realistic distribution: 5% at 30%, 5% between 20‑29%, 5% at 15%, 50% between 5‑10%, 30% between 0‑5%, and 5% between 0 and -10%.
 - Increased variance in store sizes, customer incomes, and product prices for more realistic analytical patterns.
@@ -69,13 +69,13 @@ Ready‑to‑run queries in T‑SQL, DAX, and Python (pandas) for all key metric
 ### 7. Dashboards built on the generated data
 The following reports were built using Power BI connected to the SQL Server database. They demonstrate the quality and analytical readiness of the data.
 
-![Revenue Trend](https://github.com/user-attachments/assets/bb23b6c3-0d5a-4123-8c57-2894939db6c5)
+![Revenue Trend](images/revenue_trend.jpg)
 *Revenue Trend – visualising the enforced daily net‑sales pattern (decline → flat → strong rise).*
 
-![Payment Matrix](https://github.com/user-attachments/assets/03127137-b303-4257-80d7-99ae06157587)
+![Payment Matrix](images/payment_matrix.jpg)
 *Payment Matrix – breakdown of payment methods by channel.*
 
-![Monthly Revenue](https://github.com/user-attachments/assets/e96770d1-9f3f-481d-9cc6-75898f2ecae4)
+![Monthly Revenue](images/monthly_revenue.jpg)
 *Monthly Revenue – seasonal revenue pattern with clear peaks in December.*
 
 ## Technologies used
@@ -107,29 +107,28 @@ The following reports were built using Power BI connected to the SQL Server data
 - Query gold tables from SQL endpoint, for example:
   ```sql
   SELECT * FROM 03_gold_db.vw_001_product_category_margin LIMIT 10;
+  D. Power BI reporting
+Connect to the SQL endpoint of your Fabric Lakehouse (or to SQL Server).
 
-### D. Power BI reporting
-- Connect to the SQL endpoint of your Fabric Lakehouse (or to SQL Server).
-- Create measures: Total Revenue, Total COGS, Gross Margin percentage.
-- Build dashboards (examples: Revenue Trend, Payment Matrix, Monthly Revenue).
+Create measures: Total Revenue, Total COGS, Gross Margin percentage.
 
-## File reference
-| File | Description |
-|------|-------------|
-| `final_retail_gen.py` | Generates 10M rows + dimensions, margin ≤30% with distribution, fraction storage |
-| `final_retail_loader.sql` | Creates SQL Server database, tables, loads CSVs |
-| `deploy_all_analytical_views.sql` | Creates 17 analytical views |
-| `03_data_quality_checks.sql` | Comprehensive data quality checks |
-| `check_product_margins.sql` | Validates product margins (fraction -0.10..0.30) |
-| `model_validation.sql` | Star schema integrity, foreign keys, CCI |
-| `01_bronze_ingestion.py` | Reads CSVs into bronze Delta tables |
-| `02_silver_transformation.py` | Cleans, casts, deduplicates, adds dummy promo |
-| `03_gold_views.py` | Creates 17 materialized gold tables in `03_gold_db` |
-| `04_optimization.py` | Compaction and Z‑order for Delta tables |
-| `05_silver_gold_validation.sql` | Data quality checks for silver/gold layers |
-| `06_analysis_queries.py` | Analytical queries on silver data |
-| `analysis_queries.py` | Analytical queries using pandas (standalone) |
-| `comprehensive_tsql_queries.sql` | Ready‑to‑run T‑SQL analytical queries |
+Build dashboards (examples: Revenue Trend, Payment Matrix, Monthly Revenue).
 
-## License
+File reference
+File	Description
+final_retail_gen.py	Generates 10M rows + dimensions, margin ≤30% with distribution, fraction storage
+final_retail_loader.sql	Creates SQL Server database, tables, loads CSVs
+deploy_all_analytical_views.sql	Creates 17 analytical views
+03_data_quality_checks.sql	Comprehensive data quality checks
+check_product_margins.sql	Validates product margins (fraction -0.10..0.30)
+model_validation.sql	Star schema integrity, foreign keys, CCI
+01_bronze_ingestion.py	Reads CSVs into bronze Delta tables
+02_silver_transformation.py	Cleans, casts, deduplicates, adds dummy promo
+03_gold_views.py	Creates 17 materialized gold tables in 03_gold_db
+04_optimization.py	Compaction and Z‑order for Delta tables
+05_silver_gold_validation.sql	Data quality checks for silver/gold layers
+06_analysis_queries.py	Analytical queries on silver data
+analysis_queries.py	Analytical queries using pandas (standalone)
+comprehensive_tsql_queries.sql	Ready‑to‑run T‑SQL analytical queries
+License
 MIT – free to use, modify, and distribute.
