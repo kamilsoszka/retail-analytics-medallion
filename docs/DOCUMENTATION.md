@@ -1,5 +1,12 @@
 # Retail Analytics – Complete Documentation
 
+**Suggested file name:** `complete_documentation.md`  
+**Author:** DataGen AI  
+**Date:** 2026-05-24  
+**Description:** Full technical documentation of the retailanalytics star schema, data generation rules, query reference (T‑SQL, DAX, Python), and dashboard screenshots. All percentage columns are stored as decimal fractions, monetary values use thousand separators with zero decimals, and percentage displays show two decimal places.
+
+---
+
 ## Project Overview
 
 The database models a multi-channel retail chain (**Online, In-Store, Mobile App, Phone Order**) with **10 million sales transactions** generated from 2023-01-01 to the current date (dynamic).
@@ -7,9 +14,9 @@ The database models a multi-channel retail chain (**Online, In-Store, Mobile App
 The data generator produces a realistic revenue trend:
 - **First half** – slight decline from 60k to 50k daily net sales
 - **Middle section** – flat/stagnation
-- **Last 30 %** – strong rise from 50k to 95k daily net sales
+- **Last 30 %** – strong rise from 50k to 95k daily net sales
 
-All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_rate`, `seasonalityfactor`) are stored as **decimal fractions** (e.g. `0.1196` = 11.96 %). In Power BI, applying the "Percentage" format displays the correct value automatically.
+All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_rate`, `seasonalityfactor`) are stored as **decimal fractions** (e.g. `0.1196` = 11.96 %). In Power BI, applying the "Percentage" format displays the correct value automatically.
 
 ---
 
@@ -43,24 +50,27 @@ All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_ra
 
 | Rule | Detail |
 |------|--------|
-| **Margins** | Stored as fractions. Range: −10 % to 30 %. Negative margins are **allowed** and do not cause validation errors. |
+| **Margins** | Stored as decimal fractions. Range: −10 % to 30 %. Negative margins are **allowed** and do not cause validation errors. |
 | **Promotions** | `promoid = 0` = "No Promotion" (dedicated row exists in `dim_promotion`) |
 | **Returns** | `returnreason = 'No return'` for non-return rows, never NULL |
 | **In-Store delivery** | `deliverydays = 0` for all In-Store transactions |
 | **Hour** | Column `hour` (0–23) always populated, never NULL |
 | **Gender** | Only `Male` / `Female` values |
 | **Percentages** | All stored as decimal fractions, ready for Power BI % formatting |
+| **Quantity scaling** | Daily net-sales targets met by scaling `qty`, preserving intrinsic product margins |
+| **Discount flag** | `discountapplied` set **after** rounding `discountamount` to avoid false mismatches |
+| **Variance** | Wide spread in store sizes (0.1–10.0), customer incomes (bi-modal), and product margins (prescribed distribution) |
 
 ### Product margin distribution
 
 | Margin range | Share of products |
 |---|---|
-| Exactly 30 % | 5 % |
-| 20 %–29 % | 5 % |
-| Exactly 15 % | 5 % |
-| 5 %–10 % | 50 % |
-| 0 %–5 % | 30 % |
-| −10 %–0 % (negative) | 5 % |
+| Exactly 30 % | 5 % |
+| 20 %–29 % | 5 % |
+| Exactly 15 % | 5 % |
+| 5 %–10 % | 50 % |
+| 0 %–5 % | 30 % |
+| −10 %–0 % (negative) | 5 % |
 
 ---
 
@@ -126,7 +136,7 @@ All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_ra
 | brand | NVARCHAR(50) | Brand name |
 | unitcost | DECIMAL(18,2) | Cost price (USD) |
 | unitprice | DECIMAL(18,2) | Base selling price |
-| margin_pct | DECIMAL(5,4) | Profit margin as fraction (e.g. `0.1196` = 11.96 %, range −0.1000..0.3000) |
+| margin_pct | DECIMAL(5,4) | Profit margin as fraction (e.g. `0.1196` = 11.96 %, range −0.1000..0.3000) |
 | weight | DECIMAL(10,2) | kg |
 | color | NVARCHAR(20) | Red / Blue / Green / Black / White / Gray / Silver / Gold |
 | material | NVARCHAR(50) | Plastic / Metal / Wood / Glass / Fabric |
@@ -173,7 +183,7 @@ All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_ra
 |--------|------|-------------|
 | promoid | INT | PK (0 = "No Promotion", 1..100 = real promotions) |
 | promoname | NVARCHAR(150) | Unique name |
-| discount_pct | DECIMAL(5,4) | Discount as fraction (e.g. `0.2500` = 25 %) |
+| discount_pct | DECIMAL(5,4) | Discount as fraction (e.g. `0.2500` = 25 %) |
 | discount_fixed | DECIMAL(10,2) | Fixed USD discount |
 | type | NVARCHAR(50) | Percentage / Fixed Amount / BOGO / Free Shipping |
 | isactive | TINYINT | 1 = currently active |
@@ -445,6 +455,35 @@ RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
 ```python
 uplift = (avg_promo - avg_non) / avg_non
 ```
+
+---
+
+## Scripts Reference (Updated 2026-05-24)
+
+### Python Data Generation
+| Script | Description |
+|--------|-------------|
+| `generate_retail_data.py` | Generates all CSV files with realistic distributions, quantity scaling, and fraction-based percentages |
+
+### SQL Server Scripts (Execution Order)
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `build_retailanalytics_database.sql` | Creates database, tables, loads all CSV files, adds primary/foreign keys, clustered columnstore index, basic views |
+| 2 | `create_analytical_views.sql` | Creates 17 analytical views with fraction-based margin/discount columns |
+| 3 | `validate_retail_data_quality.sql` | Comprehensive data quality checks (60+ tests) |
+| 4 | `analyze_product_margins.sql` | Detailed margin distribution analysis with histogram and formatted percentages |
+| 5 | `validate_star_schema_model.sql` | Star schema integrity, FK validation, columnstore index check |
+| 6 | `quick_data_quality_checks.sql` | Lightweight sanity checks with thousand separators and percentage formatting |
+
+### Microsoft Fabric Notebooks (Execution Order)
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `ingest_bronze_layer.py` | Loads CSV files into Bronze Delta tables with audit columns |
+| 2 | `transform_silver_layer.py` | Cleans, casts types (fractions to DECIMAL(5,4)), deduplicates, ensures dummy promotion row |
+| 3 | `create_gold_views.py` | Creates 17 materialized Gold analytical tables with fraction-based margins |
+| 4 | `optimize_delta_tables.py` | Delta Lake compaction and Z-ordering across all layers |
+| 5 | `validate_fabric_layers.sql` | Data quality checks for Silver and Gold layers in Fabric SQL Endpoint |
+| 6 | `analyze_silver_data.py` | Analytical queries on Silver data with formatted output (thousand separators, percentages) |
 
 ---
 
