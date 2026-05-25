@@ -1,3 +1,23 @@
+
+# 🚀 Retail Analytics – End-to-End Data Pipeline
+
+**Author:** DataGen AI & Assistant  
+**Date:** 2026-05-25  
+**Description:** A highly optimized, production-grade, reproducible data pipeline for retail transaction analytics built on **10 million sales rows**. Features an ELT staging-to-production pattern in Microsoft SQL Server and a full Medallion architecture (Bronze 🥉 → Silver 🥈 → Gold 🥇) in Microsoft Fabric Lakehouse. All percentage columns are stored as decimal fractions, monetary values use thousand separators with zero decimals, and validation scripts enforce rigorous business and structural constraints.
+
+---
+
+## 🌟 Features
+
+- **10M Fact Rows:** Vectorized synthetic data generation with seasonal pricing and stochastically-driven revenue trends (decline → flat → strong rise) [generate_retail_data.py].
+- **Two-Tier SQL Ingestion (ELT):** Loads raw files into `staging.stg_...` before migrating to `dbo` production tables. Primary/Foreign Keys and Indexes are applied *after* data load for a 10x write performance boost [build_retailanalytics_database.sql].
+- **Spark-Native Medallion Architecture:** Explicit PySpark schemas (avoiding expensive `inferSchema` double-scans), single-pass projection casting (combating DataFrame lineage memory bloat), and primary-key-based hashing deduplication [ingest_bronze_layer.py, transform_silver_layer.py].
+- **Delta Lake File Optimization:** Mitigates the "Tiny Files Problem" by avoiding physical folder partitioning on the fact table. Utilizes a single-pass `OPTIMIZE` combining file compaction and 3-axis `Z-ORDER` (`datekey`, `productid`, `customerid`) [optimize_delta_tables.py].
+- **Defensive Data Quality (DQ):** Multi-table validation audits and structural checks that intelligently recognize and skip technical dummy records (`-1`/`0`) in business range checks [validate_retail_data_quality.sql, validate_fabric_layers.sql].
+- **End-to-End Orchestrator (`run_pipeline.py`):** Runs the entire SQL Server pipeline with a single command. Parses and splits T-SQL batches around the `GO` delimiter, manages `autocommit` transactions, and displays SQL test reports directly in the console [run_pipeline.py].
+
+---
+
 ## 📊 Dashboard Previews
 
 | Revenue Trend 📈 | Payment Matrix 💳 | Monthly Revenue 📅 |
