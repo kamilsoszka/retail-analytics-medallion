@@ -1,10 +1,10 @@
 -- ============================================================================
 -- validate_star_schema_model.sql
 -- ============================================================================
--- Author:           DataGen AI
--- Created:           2026-05-23
--- Last modified:     2026-05-24 02:00:00 UTC
--- Suggested name:    validate_star_schema_model.sql
+-- Author:           DataGen AI & Assistant
+-- Created:          2026-05-23
+-- Last modified:    2026-05-25 18:50:00 UTC
+-- Suggested name:   validate_star_schema_model.sql
 -- Description:
 --   Performs a lightweight structural validation of the retailanalytics
 --   star‑schema model.  It verifies:
@@ -12,10 +12,9 @@
 --     2. That the fact table contains only the expected columns.
 --     3. That every dimension table has a primary key defined.
 --     4. That the fact table has a clustered columnstore index (CCI).
---     5. That there are no orphan rows in the fact table (every FK value
---        references an existing dimension row, including promoid = 0).
---   This script is fast and safe – it only reads metadata and runs a single
---   left‑join check.  Run it immediately after loading data.
+--     5. That all foreign keys on factsales are fully trusted by the optimizer.
+--     6. That the database recovery model is set to SIMPLE (prevents log bloat).
+--     7. That there are no orphan rows in the fact table (trusted FK-assisted).
 -- ============================================================================
 
 USE retailanalytics;
@@ -35,7 +34,7 @@ CREATE TABLE #model_checks (
     check_category    NVARCHAR(50),       -- short category (star_schema, fact_purity, …)
     check_description NVARCHAR(200),      -- human‑readable explanation
     check_result      NVARCHAR(20),       -- OK or ISSUE
-    details           INT                 -- supporting number (e.g. count of FKs)
+    details           NVARCHAR(100)       -- supporting info or counts
 );
 
 -- ============================================================================
@@ -46,7 +45,7 @@ INSERT INTO #model_checks
 SELECT 'star_schema',
        'factsales has foreign keys to all 5 dimensions (date, product, customer, store, promotion)',
        CASE WHEN COUNT(*) = 5 THEN 'OK' ELSE 'ISSUE' END,
-       COUNT(*)
+       CAST(COUNT(*) AS NVARCHAR(100))
 FROM sys.foreign_keys
 WHERE parent_object_id = OBJECT_ID('dbo.factsales')
   AND referenced_object_id IN (
@@ -65,7 +64,7 @@ INSERT INTO #model_checks
 SELECT 'fact_purity',
        'factsales contains only allowed columns (no extra or unexpected columns)',
        CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'ISSUE' END,
-       COUNT(*)
+       CAST(COUNT(*) AS NVARCHAR(100))
 FROM sys.columns
 WHERE object_id = OBJECT_ID('dbo.factsales')
   AND name NOT IN (
@@ -83,7 +82,7 @@ INSERT INTO #model_checks
 SELECT 'dimension_keys',
        'all five dimension tables (dimdate, dimproduct, dimcustomer, dimstore, dimpromotion) have a primary key',
        CASE WHEN COUNT(DISTINCT parent_object_id) = 5 THEN 'OK' ELSE 'ISSUE' END,
-       COUNT(DISTINCT parent_object_id)
+       CAST(COUNT(DISTINCT parent_object_id) AS NVARCHAR(100))
 FROM sys.key_constraints
 WHERE type = 'PK'
   AND parent_object_id IN (
@@ -99,24 +98,50 @@ WHERE type = 'PK'
 --    This is critical for query speed and compression on 10M rows.
 -- ============================================================================
 INSERT INTO #model_checks
-SELECT 'performance',
+SELECT 'performance_cci',
        'factsales has a clustered columnstore index (recommended for large fact tables)',
        CASE WHEN COUNT(*) = 1 THEN 'OK' ELSE 'ISSUE' END,
-       COUNT(*)
+       CAST(COUNT(*) AS NVARCHAR(100))
 FROM sys.indexes
 WHERE object_id = OBJECT_ID('dbo.factsales')
   AND type_desc = 'CLUSTERED COLUMNSTORE';
 
 -- ============================================================================
--- 5. REFERENTIAL INTEGRITY – no orphan rows in the fact table.
+-- 5. TRUSTED CONSTRAINTS – are all Foreign Keys trusted by the SQL Server Optimizer?
+--    Expected: 0 untrusted foreign keys (all must be fully trusted/validated).
+-- ============================================================================
+INSERT INTO #model_checks
+SELECT 'performance_fk_trust',
+       'all foreign keys on factsales are fully TRUSTED by the query optimizer (allows query simplification)',
+       CASE WHEN COUNT(*) = 0 THEN 'OK' ELSE 'ISSUE' END,
+       CAST(COUNT(*) AS NVARCHAR(100))
+FROM sys.foreign_keys
+WHERE parent_object_id = OBJECT_ID('dbo.factsales')
+  AND is_not_trusted = 1;
+
+-- ============================================================================
+-- 6. CONFIGURATION – is the database recovery model set to SIMPLE?
+--    Expected: SIMPLE recovery model to prevent transaction log size explosion.
+-- ============================================================================
+INSERT INTO #model_checks
+SELECT 'db_config',
+       'database recovery model is set to SIMPLE (prevents transaction log space exhaustion)',
+       CASE WHEN recovery_model_desc = 'SIMPLE' THEN 'OK' ELSE 'ISSUE' END,
+       recovery_model_desc
+FROM sys.databases
+WHERE name = 'retailanalytics';
+
+-- ============================================================================
+-- 7. REFERENTIAL INTEGRITY – no orphan rows in the fact table.
 --    A single LEFT‑JOIN query checks all five foreign keys at once.
---    promoid = 0 refers to the dummy "No Promotion" row and is valid.
+--    promoid = 0 and promoid = -1 are valid dimension keys.
+--    Note: Since FKs are trusted, SQL Server evaluates this metadata check instantly.
 -- ============================================================================
 INSERT INTO #model_checks
 SELECT 'referential_integrity',
-       'no orphan rows in factsales (all foreign key values have matching dimension rows; promoid = 0 is valid)',
+       'no orphan rows in factsales (all foreign key values have matching dimension rows)',
        CASE WHEN orphan_count = 0 THEN 'OK' ELSE 'ISSUE' END,
-       orphan_count
+       CAST(orphan_count AS NVARCHAR(100))
 FROM (
     SELECT COUNT(*) AS orphan_count
     FROM dbo.factsales f
@@ -133,7 +158,7 @@ FROM (
 ) AS orphan_check;
 
 -- ============================================================================
--- 6. FINAL REPORT
+-- 8. FINAL REPORT
 --    Displays all checks sorted so that any ISSUE appears first.
 -- ============================================================================
 SELECT check_category,

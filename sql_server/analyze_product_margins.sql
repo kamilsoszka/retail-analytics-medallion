@@ -1,16 +1,17 @@
 -- ============================================================================
 -- analyze_product_margins.sql
 -- ============================================================================
--- Author:           DataGen AI
--- Created:           2026-05-23
--- Last modified:     2026-05-24 02:30:00 UTC
--- Suggested name:    analyze_product_margins.sql
+-- Author:           DataGen AI & Assistant
+-- Created:          2026-05-23
+-- Last modified:    2026-05-25 18:55:00 UTC
+-- Suggested name:   analyze_product_margins.sql
 -- Description:
 --   Performs a detailed analysis of the product margin distribution in the
---   retailanalytics database.  Margins are stored as fractions (‑0.10 to
---   0.30).  The script displays:
+--   retailanalytics database.  Margins are stored as fractions (-0.10 to
+--   0.30). Correctly handles dummy productid = -1 by filtering active products.
+--   The script displays:
 --     • Basic statistics (min, max, avg, median, standard deviation)
---     • Count of products with margins above 30 % or below ‑10 %
+--     • Count of products with margins above 30% or below -10%
 --     • Consistency between stored margin_pct and calculated value
 --     • Distribution histogram with visual bars
 --     • Margin statistics broken down by product category
@@ -48,10 +49,10 @@ WITH MarginCalc AS (
         unitprice,
         unitcost,
         margin_pct AS stored_margin_pct,
-        -- Calculate actual margin as a percentage (0‑100 scale)
+        -- Calculate actual margin as a percentage (0‑100 scale) with division protection
         ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 AS actual_margin_pct
     FROM dbo.dimproduct
-    WHERE unitprice > 0
+    WHERE productid > 0 AND unitprice > 0
 )
 SELECT
     FORMAT(COUNT(*), 'N0')                                              AS total_products,
@@ -87,13 +88,14 @@ SELECT TOP 20
     category,
     unitprice,
     unitcost,
-    FORMAT(((unitprice - unitcost) / unitprice) * 100, 'N2') + '%'     AS actual_margin_pct,
-    FORMAT(margin_pct * 100, 'N2') + '%'                                AS stored_margin_pct,
-    'VIOLATION'                                                         AS remark
+    FORMAT(((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100, 'N2') + '%'     AS actual_margin_pct,
+    FORMAT(margin_pct * 100, 'N2') + '%'                                          AS stored_margin_pct,
+    'VIOLATION'                                                                   AS remark
 FROM dbo.dimproduct
-WHERE unitprice > 0
-  AND ((unitprice - unitcost) / unitprice) * 100 > 30.0
-ORDER BY ((unitprice - unitcost) / unitprice) * 100 DESC;
+WHERE productid > 0 
+  AND unitprice > 0
+  AND ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 > 30.0
+ORDER BY ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 DESC;
 GO
 
 -- ============================================================================
@@ -106,57 +108,58 @@ SELECT TOP 20
     category,
     unitprice,
     unitcost,
-    FORMAT(((unitprice - unitcost) / unitprice) * 100, 'N2') + '%'     AS actual_margin_pct,
-    FORMAT(margin_pct * 100, 'N2') + '%'                                AS stored_margin_pct,
-    'WARNING'                                                           AS remark
+    FORMAT(((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100, 'N2') + '%'     AS actual_margin_pct,
+    FORMAT(margin_pct * 100, 'N2') + '%'                                          AS stored_margin_pct,
+    'WARNING'                                                                     AS remark
 FROM dbo.dimproduct
-WHERE unitprice > 0
-  AND ((unitprice - unitcost) / unitprice) * 100 < -10.0
-ORDER BY ((unitprice - unitcost) / unitprice) * 100 ASC;
+WHERE productid > 0 
+  AND unitprice > 0
+  AND ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 < -10.0
+ORDER BY ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 ASC;
 GO
 
 -- ============================================================================
 -- 4. MARGIN DISTRIBUTION HISTOGRAM
 --    Products are bucketed in 5‑percentage‑point intervals.
---    product_count is formatted with thousand separators.
---    percentage is already a percentage (0‑100 scale) and shown with 2 decimals.
+--    Optimized: Removes repeated CASE statements using sub-aggregations.
 --    A visual bar chart is drawn using the █ character.
 -- ============================================================================
 PRINT '--- 4. MARGIN DISTRIBUTION (HISTOGRAM) ---';
-WITH MarginCalc AS (
-    SELECT CASE
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 < -10   THEN '< -10%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= -5   THEN '-10% to -5%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 0    THEN '-5% to 0%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 5    THEN '0-5%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 10   THEN '5-10%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 15   THEN '10-15%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 20   THEN '15-20%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 25   THEN '20-25%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 30   THEN '25-30%'
-        ELSE '>30% (invalid)'
-    END AS margin_bucket,
-    COUNT(*) AS product_count,
-    CAST(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() AS DECIMAL(5,2)) AS percentage
-    FROM dbo.dimproduct WHERE unitprice > 0
-    GROUP BY CASE
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 < -10   THEN '< -10%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= -5   THEN '-10% to -5%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 0    THEN '-5% to 0%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 5    THEN '0-5%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 10   THEN '5-10%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 15   THEN '10-15%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 20   THEN '15-20%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 25   THEN '20-25%'
-        WHEN ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 <= 30   THEN '25-30%'
-        ELSE '>30% (invalid)'
-    END
+WITH MarginData AS (
+    SELECT 
+        ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 AS actual_margin_pct
+    FROM dbo.dimproduct
+    WHERE productid > 0 AND unitprice > 0
+),
+BucketedData AS (
+    SELECT 
+        CASE
+            WHEN actual_margin_pct < -10  THEN '< -10%'
+            WHEN actual_margin_pct <= -5  THEN '-10% to -5%'
+            WHEN actual_margin_pct <= 0   THEN '-5% to 0%'
+            WHEN actual_margin_pct <= 5   THEN '0-5%'
+            WHEN actual_margin_pct <= 10  THEN '5-10%'
+            WHEN actual_margin_pct <= 15  THEN '10-15%'
+            WHEN actual_margin_pct <= 20  THEN '15-20%'
+            WHEN actual_margin_pct <= 25  THEN '20-25%'
+            WHEN actual_margin_pct <= 30  THEN '25-30%'
+            ELSE '>30% (invalid)'
+        END AS margin_bucket
+    FROM MarginData
+),
+HistogramAgg AS (
+    SELECT 
+        margin_bucket,
+        COUNT(*) AS product_count,
+        CAST(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() AS DECIMAL(5,2)) AS percentage
+    FROM BucketedData
+    GROUP BY margin_bucket
 )
 SELECT margin_bucket,
        FORMAT(product_count, 'N0')                AS product_count,
        FORMAT(percentage, 'N2') + '%'             AS percentage,
        REPLICATE('█', CAST(percentage / 2 AS INT)) AS bar_chart
-FROM MarginCalc
+FROM HistogramAgg
 ORDER BY CASE margin_bucket
     WHEN '< -10%'         THEN 1
     WHEN '-10% to -5%'    THEN 2
@@ -191,7 +194,7 @@ SELECT category,
                        THEN 1 ELSE 0 END), 'N0')
                                                                        AS violations_above_30pct
 FROM dbo.dimproduct
-WHERE unitprice > 0
+WHERE productid > 0 AND unitprice > 0
 GROUP BY category
 ORDER BY AVG(((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100) DESC;
 GO
@@ -216,9 +219,9 @@ SELECT FORMAT(COUNT(*), 'N0')                                          AS total_
                                     ((unitprice - unitcost) /
                                      NULLIF(unitprice, 0))) >= 0.0001
                            THEN 1 ELSE 0 END) * 100.0 /
-                   COUNT(*) AS DECIMAL(5,2)), 'N2') + '%'             AS inconsistency_pct
+                   NULLIF(COUNT(*), 0) AS DECIMAL(5,2)), 'N2') + '%'  AS inconsistency_pct
 FROM dbo.dimproduct
-WHERE unitprice > 0;
+WHERE productid > 0 AND unitprice > 0;
 GO
 
 -- ============================================================================
@@ -233,11 +236,12 @@ SELECT TOP 10
     category,
     unitprice,
     unitcost,
-    FORMAT(margin_pct * 100, 'N2') + '%'                                 AS stored_margin_pct,
-    FORMAT(((unitprice - unitcost) / unitprice) * 100, 'N2') + '%'      AS actual_margin_pct
+    FORMAT(margin_pct * 100, 'N2') + '%'                                          AS stored_margin_pct,
+    FORMAT(((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100, 'N2') + '%'     AS actual_margin_pct
 FROM dbo.dimproduct
-WHERE unitprice > 0
-  AND ((unitprice - unitcost) / unitprice) * 100 BETWEEN -10.0 AND 30.0
+WHERE productid > 0 
+  AND unitprice > 0
+  AND ((unitprice - unitcost) / NULLIF(unitprice, 0)) * 100 BETWEEN -10.0 AND 30.0
 ORDER BY productid;
 GO
 

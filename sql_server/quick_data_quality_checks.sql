@@ -1,10 +1,10 @@
 -- ============================================================================
 -- quick_data_quality_checks.sql
 -- ============================================================================
--- Author:           DataGen AI
--- Created:           2026-05-23
--- Last modified:     2026-05-24 02:20:00 UTC
--- Suggested name:    quick_data_quality_checks.sql
+-- Author:           DataGen AI & Assistant
+-- Created:          2026-05-23
+-- Last modified:    2026-05-25 18:58:00 UTC
+-- Suggested name:   quick_data_quality_checks.sql
 -- Description:
 --   A lightweight set of sanity checks for the retailanalytics database.
 --   Large numeric values (>1000) are displayed with thousand separators
@@ -88,6 +88,7 @@ ORDER BY salesid;
 
 -- ============================================================================
 -- 5. ORPHAN FOREIGN KEYS – formatted
+--    Relies on fully trusted foreign keys to bypass physical scans on 10M rows.
 -- ============================================================================
 PRINT '--- 5. Orphan foreign keys ---';
 SELECT 'missing datekey'    AS constraint_name,

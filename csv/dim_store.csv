@@ -1,201 +1,202 @@
 storeid,storename,city,type,staff,sizem2,hascafe,openingyear,region,renovationyear,parkingspots,storerating,hasdeliveryservice,floornumber,distancetocitycenterkm,annualrentcost,storesizemultiplier
-1,FastShop New York Market,New York,Convenience,20,686,1,2006,North,2011,28,2.9,0,4,4.8,15801.0,4.875579595420067
-2,TheGalleria Atlanta Square,Atlanta,Department,30,2075,0,1999,South,0,89,2.8,0,3,5.7,52006.0,1.6867445969253365
-3,ValueSave Chicago Point,Chicago,Supermarket,22,1128,0,2005,North,2019,47,3.0,1,3,0.8,33229.0,0.8682290258944555
-4,QuickStop New York Plaza,New York,Convenience,3,417,0,1999,North,2014,0,2.2,0,4,0.8,9605.0,0.2741541759270635
-5,MiniMarket Houston Plaza,Houston,Convenience,12,720,0,2006,South,2016,35,2.3,1,5,20.8,22686.0,0.6394735658710585
-6,TheGalleria Indianapolis Point,Indianapolis,Department,36,1863,1,2012,Central,0,43,3.2,1,2,18.4,32736.0,4.024712744612035
-7,FreshMart Cleveland Mart,Cleveland,Supermarket,52,2373,1,1998,Central,0,83,2.7,0,1,9.2,43775.0,1.2781405084755895
-8,DailyGrocer Orlando Market,Orlando,Supermarket,47,2242,1,2011,South,2012,97,2.3,1,5,17.6,35927.0,0.9878320823169866
-9,EasyBuy Atlanta Center,Atlanta,Convenience,6,437,0,2012,South,2018,26,2.2,1,4,10.2,15334.0,3.0093917978527336
-10,MegaMart Buffalo Market,Buffalo,Hypermarket,112,4650,0,2010,North,2013,173,2.9,0,1,23.8,70144.0,6.618203665591615
-11,EasyBuy Washington DC Mart,Washington DC,Convenience,16,550,0,1986,East,0,15,3.2,1,3,24.2,21051.0,2.244628983511712
-12,MiniMarket Pittsburgh Center,Pittsburgh,Convenience,3,235,0,2009,North,2021,0,2.7,1,2,10.1,5567.0,2.4046767211342233
-13,MiniMarket Los Angeles Market,Los Angeles,Convenience,4,399,1,1987,West,0,14,3.1,0,3,21.4,10909.0,8.55259341425156
-14,MiniMarket Columbus Plaza,Columbus,Convenience,15,540,0,1992,Central,2023,21,2.8,1,4,19.4,10830.0,2.0353421811525867
-15,MetroStore New York Plaza,New York,Department,31,1262,0,2017,North,0,60,2.8,1,1,8.1,20763.0,1.1375237426295572
-16,CityFood Philadelphia Mart,Philadelphia,Supermarket,45,2282,0,2019,East,2019,83,2.6,0,4,6.2,31134.0,3.6978464265944146
-17,TownSquare Buffalo Point,Buffalo,Department,39,1861,1,1990,North,0,80,3.0,1,1,11.7,35091.0,1.211723565993084
-18,TownSquare Baltimore Market,Baltimore,Department,90,3403,1,2007,East,2022,143,2.7,0,5,19.6,88144.0,1.0603606976470368
-19,MetroStore Austin Square,Austin,Department,55,2692,1,2009,South,2012,110,3.4,1,2,24.0,64852.0,7.602524355393449
-20,MiniMarket Boston Square,Boston,Convenience,29,626,0,2003,North,0,21,3.1,1,5,19.2,22530.0,1.1614355638359675
-21,BigBox Miami Point,Miami,Hypermarket,94,3858,0,1989,South,0,157,2.9,0,5,21.5,85077.0,0.1
-22,GoodMart Tampa Hub,Tampa,Supermarket,61,2143,1,1995,East,0,96,3.5,0,4,15.3,46072.0,2.4958304828263937
-23,MegaMart Nashville Plaza,Nashville,Hypermarket,62,3041,1,1996,South,0,134,3.4,1,2,21.0,43162.0,1.0257050790455462
-24,UrbanMall Minneapolis Market,Minneapolis,Department,28,1347,0,1994,North,2022,81,3.0,1,1,19.7,28847.0,1.165366665968597
-25,GrandPlaza Seattle Square,Seattle,Department,30,1541,1,1992,North,2012,46,2.3,1,1,9.7,44698.0,2.839203604338471
-26,PriceCutter Baltimore Point,Baltimore,Hypermarket,113,4680,1,2008,East,2019,180,3.2,0,3,14.0,96976.0,1.3508403901309503
-27,BigBox Las Vegas Plaza,Las Vegas,Hypermarket,68,3296,1,2012,West,2016,107,3.0,1,1,20.2,42494.0,2.1338473033249694
-28,SuperSaver Baltimore Square,Baltimore,Hypermarket,64,2637,1,2020,East,2020,119,2.7,1,4,1.6,54642.0,0.1456166318746643
-29,MetroStore Cleveland Hub,Cleveland,Department,39,1526,0,2021,Central,0,56,2.3,1,5,20.3,28150.0,0.531704087890742
-30,UrbanMall Portland Market,Portland,Department,66,2992,0,2005,West,0,122,3.3,0,5,4.9,37324.0,8.888430492295543
-31,ValueSave Miami Point,Miami,Supermarket,44,1524,0,1992,South,2019,51,2.4,1,5,13.1,42009.0,1.6124246414093735
-32,FreshMart New York Plaza,New York,Supermarket,45,1988,1,1993,North,2023,74,3.0,1,2,20.3,32707.0,0.2213067465521439
-33,GrandPlaza Orlando Center,Orlando,Department,83,3462,1,1999,South,0,156,3.6,0,1,6.7,55478.0,0.4551909847837318
-34,GiantStore San Diego Point,San Diego,Hypermarket,84,3973,1,2002,West,0,169,3.6,1,4,6.5,82135.0,0.5010229275939446
-35,GiantStore Cleveland Mart,Cleveland,Hypermarket,54,2704,0,2004,Central,2012,106,2.7,0,2,10.4,39904.0,1.8641724331872713
-36,GoodMart Chicago Hub,Chicago,Supermarket,25,877,1,1990,North,2023,46,3.2,1,3,22.4,25835.0,0.9810507020969349
-37,MetroStore Richmond Market,Richmond,Department,39,1628,1,1996,East,0,76,2.2,1,4,0.5,34779.0,0.7475016525699845
-38,MarketPlace Detroit Plaza,Detroit,Supermarket,32,1373,1,1986,North,2011,49,2.2,0,4,22.6,39964.0,1.6565295233335142
-39,GoodMart Los Angeles Square,Los Angeles,Supermarket,17,931,1,1991,West,2021,15,2.8,1,4,4.3,18181.0,2.9250305331708697
-40,CornerShop Washington DC Hub,Washington DC,Convenience,27,676,1,2000,East,0,13,2.6,1,5,24.8,25874.0,1.2082410524226652
-41,FastShop Detroit Hub,Detroit,Convenience,5,646,0,1987,North,0,5,2.5,0,4,23.9,26325.0,0.8272477524014804
-42,CornerShop Denver Market,Denver,Convenience,5,665,0,1987,Central,2015,44,2.7,1,1,12.6,17481.0,0.9942189107722547
-43,GiantStore Houston Market,Houston,Hypermarket,106,4435,0,2011,South,2022,197,2.9,1,4,13.1,79851.0,2.4788262380339914
-44,CityCenter Los Angeles Market,Los Angeles,Department,55,2187,0,2022,West,0,111,2.6,1,5,12.3,42709.0,1.6341843642094218
-45,CityCenter Baltimore Plaza,Baltimore,Department,54,2336,1,2017,East,2017,63,2.9,0,4,16.1,60506.0,4.140250140603809
-46,CityCenter St. Louis Square,St. Louis,Department,72,3361,1,2012,Central,2012,150,3.3,1,3,2.7,100627.0,0.41488616690452845
-47,CityCenter Sacramento Mart,Sacramento,Department,68,2901,0,1985,West,2012,149,3.2,1,3,1.3,84631.0,0.6502467796481287
-48,CornerShop Omaha Square,Omaha,Convenience,26,575,0,1992,Central,2015,39,2.5,0,5,1.9,16798.0,4.169387018597057
-49,SuperSaver Portland Market,Portland,Hypermarket,90,3166,1,2021,West,2021,94,3.0,1,1,11.4,31596.0,0.6299004978319747
-50,SuperSaver Indianapolis Hub,Indianapolis,Hypermarket,44,2592,0,2016,Central,2016,130,2.5,1,1,7.3,36436.0,8.678241037774471
-51,OnTheRun Austin Square,Austin,Convenience,6,460,0,2021,South,2021,19,2.1,1,2,15.7,15514.0,8.90173647318905
-52,GiantStore Jacksonville Point,Jacksonville,Hypermarket,95,4469,0,1988,East,2015,175,3.5,1,5,24.8,96852.0,8.765213744292913
-53,CornerShop Seattle Center,Seattle,Convenience,28,695,0,2014,North,2014,34,2.5,1,4,10.0,28223.0,0.5730576352565788
-54,GrandPlaza Philadelphia Hub,Philadelphia,Department,39,2681,0,1990,East,2020,91,2.5,1,5,14.6,36577.0,1.8080952413158131
-55,QuickStop Atlanta Center,Atlanta,Convenience,12,400,0,2003,South,0,16,2.9,0,2,10.7,14035.0,0.9119966349668062
-56,CityCenter Seattle Center,Seattle,Department,73,3409,0,2016,North,2020,160,3.2,1,5,21.3,98881.0,4.991792831023434
-57,GrandPlaza Philadelphia Plaza,Philadelphia,Department,87,3334,1,1993,East,2020,142,3.2,1,5,22.6,45486.0,10.0
-58,MarketPlace Tampa Plaza,Tampa,Supermarket,52,1806,0,1996,East,0,73,2.6,1,2,22.0,38827.0,4.703501817115669
-59,FastShop Omaha Hub,Omaha,Convenience,19,757,1,1995,Central,2012,31,2.4,1,1,24.4,22115.0,1.6669126700237995
-60,CityFood Milwaukee Mart,Milwaukee,Supermarket,23,1620,0,2000,Central,2011,47,2.4,1,4,1.2,37465.0,1.063274017652676
-61,OnTheRun Sacramento Plaza,Sacramento,Convenience,3,178,0,1985,West,0,4,2.2,1,2,21.1,7270.0,3.5927002521916
-62,FastShop Chicago Point,Chicago,Convenience,10,626,1,2005,North,2011,0,2.8,1,3,18.9,25817.0,0.3800516007586626
-63,MarketPlace Jacksonville Point,Jacksonville,Supermarket,30,1862,0,2014,East,0,89,3.2,1,1,6.1,50441.0,3.13805518079565
-64,FreshMart Chicago Point,Chicago,Supermarket,31,997,0,1997,North,0,7,3.0,1,3,23.9,29370.0,0.5501143476682183
-65,QuickStop Richmond Plaza,Richmond,Convenience,3,421,0,2018,East,2020,29,3.0,0,1,4.1,12591.0,3.4717467697350792
-66,GiantStore Atlanta Point,Atlanta,Hypermarket,122,4796,1,1988,South,0,206,3.2,0,4,17.1,96162.0,1.3591712619073884
-67,TheGalleria Orlando Market,Orlando,Department,49,1527,0,2012,South,2020,80,3.1,1,4,6.0,24470.0,1.0346701923771477
-68,FreshMart San Francisco Point,San Francisco,Supermarket,41,2002,0,2022,West,2022,81,2.7,0,5,11.1,45434.0,0.5697173897318958
-69,MegaMart Kansas City Mart,Kansas City,Hypermarket,108,4761,1,2015,Central,2021,204,3.3,0,3,18.1,83543.0,1.0745542979819611
-70,BigBox San Francisco Center,San Francisco,Hypermarket,105,4786,0,2011,West,2014,189,3.2,0,1,14.3,86892.0,3.2134533159336343
-71,FreshMart Orlando Point,Orlando,Supermarket,58,2323,1,1989,South,0,75,2.5,0,4,11.0,37225.0,5.769772969866894
-72,BigBox Richmond Market,Richmond,Hypermarket,119,4897,1,2009,East,2017,218,3.2,0,2,8.5,83691.0,3.1010407892200442
-73,GoodMart Las Vegas Mart,Las Vegas,Supermarket,56,2446,1,1987,West,0,96,3.5,1,4,21.1,39419.0,8.471129301069588
-74,SuperSaver Milwaukee Plaza,Milwaukee,Hypermarket,60,2547,0,2017,Central,2017,80,2.6,0,2,4.0,47122.0,10.0
-75,CityCenter Baltimore Hub,Baltimore,Department,25,1381,1,1988,East,2022,48,2.3,1,1,11.0,35770.0,1.1169601578994792
-76,MetroStore Kansas City Market,Kansas City,Department,50,2109,0,2009,Central,0,77,2.8,1,4,22.6,46259.0,1.2878316846012205
-77,MiniMarket New York Point,New York,Convenience,12,525,0,2004,North,2010,27,3.0,1,4,21.2,12092.0,0.29286318124840877
-78,CityCenter Omaha Hub,Omaha,Department,40,2143,0,2018,Central,2018,120,3.0,0,1,10.3,44719.0,6.881748123141528
-79,QuickStop Boston Hub,Boston,Convenience,6,295,1,2010,North,2021,19,2.9,1,4,19.2,10617.0,7.840292772666171
-80,UrbanMall Seattle Center,Seattle,Department,69,3254,0,1989,North,2016,133,2.6,1,2,20.7,94385.0,0.5824130429009771
-81,ValueSave Denver Hub,Denver,Supermarket,25,1349,0,2019,Central,0,90,2.9,1,4,22.3,25329.0,3.4596554895338496
-82,UrbanMall Chicago Square,Chicago,Department,34,1974,0,2012,North,2016,93,2.6,1,3,13.8,58151.0,7.102770764037501
-83,EasyBuy Columbus Plaza,Columbus,Convenience,12,548,1,2013,Central,0,25,3.1,1,5,5.5,10990.0,2.163107669092845
-84,EasyBuy Baltimore Point,Baltimore,Convenience,4,493,1,1993,East,2017,12,2.8,0,2,6.8,17877.0,4.557989918938853
-85,BigBox Austin Market,Austin,Hypermarket,53,2555,1,2022,South,2023,106,2.6,1,3,7.7,49241.0,2.0335837169012896
-86,MarketPlace New York Hub,New York,Supermarket,58,2234,0,1990,North,2017,88,2.4,1,1,15.0,36754.0,0.3828064114071485
-87,CityCenter St. Louis Hub,St. Louis,Department,60,2508,0,2003,Central,2021,101,2.4,1,2,1.3,75088.0,5.807887286762555
-88,SuperSaver Austin Market,Austin,Hypermarket,58,2973,1,1995,South,0,138,2.8,1,5,16.1,57297.0,8.085940346551208
-89,TownSquare Seattle Market,Seattle,Department,40,1713,0,1986,North,2017,60,2.5,0,5,9.4,49687.0,3.9804754734667616
-90,GrandPlaza San Antonio Square,San Antonio,Department,70,3120,0,1993,South,2020,132,3.2,1,1,7.7,75156.0,0.5244544422261221
-91,PriceCutter Washington DC Hub,Washington DC,Hypermarket,77,2864,1,2005,East,0,128,3.0,0,1,22.0,62640.0,0.6693720066844627
-92,PriceCutter Detroit Center,Detroit,Hypermarket,78,3025,1,2008,North,2021,111,2.7,0,2,11.8,70440.0,0.4246399422887349
-93,MegaMart Austin Center,Austin,Hypermarket,72,3835,1,2018,South,0,141,2.6,0,4,2.8,73910.0,4.1535892165596815
-94,GlobalHyper Omaha Market,Omaha,Hypermarket,82,3382,1,2006,Central,2016,133,2.6,0,1,20.8,56458.0,7.553925990760776
-95,PriceCutter Denver Market,Denver,Hypermarket,88,3530,1,1987,Central,2019,134,3.5,1,4,1.7,53024.0,2.743908854077061
-96,GrandPlaza Austin Point,Austin,Department,39,1595,0,1996,South,2016,81,2.5,0,3,18.3,38425.0,5.096951938556991
-97,MegaMart Richmond Center,Richmond,Hypermarket,89,4146,0,2012,East,0,150,3.3,0,5,19.5,70857.0,0.5820672384300388
-98,DailyGrocer Sacramento Center,Sacramento,Supermarket,63,1982,1,2014,West,2015,80,3.3,1,4,9.1,57821.0,1.964100192051579
-99,CornerShop Minneapolis Square,Minneapolis,Convenience,21,733,0,2010,North,2014,67,2.9,1,5,20.7,21977.0,0.318591593355009
-100,GiantStore Indianapolis Center,Indianapolis,Hypermarket,110,4274,1,2005,Central,2021,177,3.6,1,4,13.1,60080.0,0.6530269370104849
-101,MetroStore Chicago Plaza,Chicago,Department,76,2957,0,2012,North,2012,126,2.9,1,3,11.9,87109.0,4.73228540363211
-102,GlobalHyper Kansas City Hub,Kansas City,Hypermarket,101,4406,0,2010,Central,0,193,3.7,1,1,1.6,77314.0,1.236749528849971
-103,BigBox Omaha Plaza,Omaha,Hypermarket,77,3715,1,2017,Central,2018,141,2.6,0,3,7.6,62017.0,7.0375378010345155
-104,GlobalHyper Detroit Mart,Detroit,Hypermarket,92,4154,1,2005,North,2011,149,2.6,0,1,23.3,96730.0,3.1441764772434144
-105,TheGalleria Minneapolis Square,Minneapolis,Department,58,2723,1,2019,North,2019,111,3.1,1,1,10.1,58315.0,10.0
-106,GlobalHyper Dallas Mart,Dallas,Hypermarket,91,4575,0,2018,South,2018,186,3.7,0,5,13.9,51401.0,1.8450723968031337
-107,MiniMarket Indianapolis Square,Indianapolis,Convenience,13,375,1,2002,Central,2021,0,3.0,1,3,13.5,9225.0,0.3049259494266233
-108,TheGalleria Atlanta Mart,Atlanta,Department,52,1792,0,1995,South,2015,77,2.4,0,4,15.0,44913.0,1.581801540014418
-109,QuickStop Orlando Plaza,Orlando,Convenience,12,655,0,2007,South,2013,42,2.4,0,3,2.0,14695.0,0.5191207565607818
-110,UrbanMall Richmond Mart,Richmond,Department,46,1327,0,2006,East,0,39,3.3,1,5,9.4,28349.0,5.326082625989015
-111,SuperSaver Austin Mart,Austin,Hypermarket,70,3754,0,2001,South,0,156,2.7,1,1,18.2,72349.0,1.7339049776795272
-112,QuickStop Buffalo Mart,Buffalo,Convenience,12,203,0,1989,North,0,21,3.0,1,5,5.4,5359.0,1.3983232209470313
-113,TheGalleria San Francisco Mart,San Francisco,Department,45,1436,1,1995,West,0,66,3.2,1,2,5.5,32589.0,1.420545756504905
-114,DailyGrocer Phoenix Mart,Phoenix,Supermarket,30,1426,1,2014,West,2016,67,2.8,0,2,0.7,30467.0,4.008467431215788
-115,MegaMart Atlanta Square,Atlanta,Hypermarket,102,4692,1,1999,South,2018,184,3.1,0,4,11.2,94076.0,0.9579548047314863
-116,TownSquare Orlando Market,Orlando,Department,63,2501,0,2011,South,2013,83,2.9,1,5,22.1,40078.0,4.188990415241464
-117,DailyGrocer Detroit Square,Detroit,Supermarket,39,1593,1,2019,North,2020,57,2.5,1,4,1.8,46368.0,5.781628567123529
-118,MetroStore Indianapolis Mart,Indianapolis,Department,20,1641,1,2017,Central,2023,56,3.2,0,4,5.2,28835.0,1.0935507217947644
-119,FreshMart Columbus Center,Columbus,Supermarket,12,868,1,2004,Central,2020,33,2.6,1,2,8.1,12434.0,0.5426688796842896
-120,GiantStore Baltimore Market,Baltimore,Hypermarket,103,4656,0,2000,East,2017,202,3.7,0,4,18.4,96479.0,0.890868560776416
-121,MiniMarket Chicago Point,Chicago,Convenience,3,294,0,2018,North,2018,0,2.1,1,2,16.2,12125.0,3.865654811188829
-122,DailyGrocer Tampa Point,Tampa,Supermarket,42,2077,0,1986,East,2012,85,3.4,0,1,10.7,44653.0,1.8422260420562508
-123,UrbanMall St. Louis Hub,St. Louis,Department,62,3289,0,2019,Central,0,115,2.9,1,5,19.1,98471.0,3.511663744024186
-124,MegaMart Austin Square,Austin,Hypermarket,55,2610,0,2012,South,2012,93,2.4,1,4,15.4,50301.0,10.0
-125,ValueSave Los Angeles Mart,Los Angeles,Supermarket,40,1957,1,1990,West,2022,86,2.3,0,2,22.5,38217.0,2.175251886095189
-126,TownSquare Denver Point,Denver,Department,75,3281,0,1993,Central,2019,113,3.3,1,3,20.5,61605.0,0.6245497619851554
-127,GrandPlaza Minneapolis Market,Minneapolis,Department,63,2900,0,2004,North,0,127,3.2,1,4,6.7,62106.0,5.864447123885637
-128,GrandPlaza Detroit Market,Detroit,Department,61,2601,0,1985,North,2012,83,3.3,0,1,7.2,75708.0,1.7535337390278694
-129,MarketPlace Phoenix Square,Phoenix,Supermarket,28,1145,0,1992,West,2020,55,2.3,0,1,3.6,24464.0,4.697059098719473
-130,CityFood Washington DC Plaza,Washington DC,Supermarket,32,1101,0,2007,East,0,20,2.2,0,3,8.8,30101.0,5.926526274484029
-131,MarketPlace Las Vegas Square,Las Vegas,Supermarket,32,1162,0,1987,West,2010,37,2.8,0,2,25.0,18726.0,0.5216232391838628
-132,OnTheRun Austin Hub,Austin,Convenience,23,766,0,1988,South,2020,59,2.6,1,4,10.4,25835.0,8.657322762979934
-133,DailyGrocer Detroit Plaza,Detroit,Supermarket,47,1017,1,2009,North,2011,66,2.8,1,2,5.9,29602.0,4.884887970908132
-134,ValueSave Sacramento Hub,Sacramento,Supermarket,23,940,1,2022,West,0,31,3.3,1,1,19.2,27423.0,0.7987675937080418
-135,FastShop San Antonio Plaza,San Antonio,Convenience,36,690,0,1999,South,2014,33,3.3,0,2,13.8,23269.0,2.3758112161110896
-136,ValueSave Detroit Square,Detroit,Supermarket,42,1757,0,2005,North,2021,88,3.4,0,1,4.2,51142.0,2.2448730892066844
-137,CityCenter Columbus Mart,Columbus,Department,65,2972,1,2019,Central,2019,129,3.3,0,2,9.8,42574.0,1.6967559738554203
-138,CityFood Austin Mart,Austin,Supermarket,36,1784,0,1998,South,0,67,2.6,1,3,10.7,42978.0,4.694054869172196
-139,CityCenter Miami Center,Miami,Department,48,1654,0,2020,South,2020,54,2.7,1,5,19.0,45593.0,9.25188758546932
-140,GrandPlaza San Antonio Mart,San Antonio,Department,77,2908,1,1996,South,2012,129,3.1,0,3,1.0,70049.0,1.663240232840709
-141,UrbanMall Pittsburgh Square,Pittsburgh,Department,47,1901,0,2001,North,2014,93,3.3,1,3,7.1,32167.0,8.142177037385393
-142,FastShop Denver Square,Denver,Convenience,13,189,1,1993,Central,2018,33,2.2,1,5,13.2,4968.0,5.396999400762641
-143,OnTheRun San Diego Plaza,San Diego,Convenience,5,686,0,2019,West,0,2,2.5,1,5,7.1,24818.0,2.1787588718000244
-144,QuickStop Houston Mart,Houston,Convenience,3,410,0,1997,South,2021,0,2.1,1,4,15.9,12918.0,2.0368756840908913
-145,CityFood San Francisco Mart,San Francisco,Supermarket,50,1803,0,1999,West,0,89,2.9,1,4,12.3,40918.0,0.413507988287816
-146,CityCenter Milwaukee Hub,Milwaukee,Department,41,1892,1,2002,Central,2010,52,3.3,1,3,9.4,43755.0,0.27228061495971706
-147,OnTheRun Dallas Plaza,Dallas,Convenience,12,273,0,2017,South,0,29,3.0,1,3,23.8,5368.0,2.0097842092613685
-148,MiniMarket Las Vegas Hub,Las Vegas,Convenience,3,187,0,1990,West,2010,4,2.3,1,1,16.0,4219.0,0.5903057231870946
-149,MarketPlace Columbus Hub,Columbus,Supermarket,56,1956,1,2011,Central,2013,70,3.5,0,1,3.7,28019.0,1.5721382407554843
-150,MiniMarket Indianapolis Point,Indianapolis,Convenience,3,400,0,2007,Central,2013,19,2.8,0,4,14.2,9840.0,0.867972462357115
-151,MarketPlace San Antonio Market,San Antonio,Supermarket,9,926,0,2011,South,0,16,2.1,0,4,19.6,22306.0,0.1927818951619682
-152,GiantStore Austin Point,Austin,Hypermarket,77,2967,1,2018,South,2018,131,2.7,1,1,17.9,57181.0,2.5313821307782036
-153,OnTheRun Austin Center,Austin,Convenience,3,603,0,2022,South,0,49,2.4,0,1,4.7,20337.0,1.0025651178316641
-154,GlobalHyper Baltimore Market,Baltimore,Hypermarket,60,2574,1,1998,East,2018,116,2.4,1,2,24.3,53337.0,1.8152776932491097
-155,FreshMart Washington DC Plaza,Washington DC,Supermarket,48,2201,1,2020,East,2022,84,3.4,1,2,11.5,60174.0,0.5645398364981409
-156,UrbanMall Atlanta Square,Atlanta,Department,50,2533,1,1992,South,0,78,2.9,1,1,4.4,63484.0,1.1032046948203047
-157,QuickStop Atlanta Point,Atlanta,Convenience,4,263,0,2019,South,2019,0,3.1,0,2,4.9,9228.0,10.0
-158,ValueSave Phoenix Point,Phoenix,Supermarket,34,1852,1,2003,West,2010,54,2.6,1,5,2.9,39569.0,1.9237207475151306
-159,TheGalleria Los Angeles Mart,Los Angeles,Department,55,1957,0,2014,West,0,78,2.4,1,4,20.2,38217.0,3.188311971096804
-160,GrandPlaza San Diego Square,San Diego,Department,50,1605,1,1998,West,2010,65,2.8,1,4,3.5,41476.0,0.3587799007829727
-161,BigBox Buffalo Center,Buffalo,Hypermarket,71,3446,0,2004,North,2019,150,2.6,0,1,3.6,51982.0,10.0
-162,MarketPlace Charlotte Mart,Charlotte,Supermarket,37,1578,0,2009,East,2015,36,2.8,1,3,21.3,20220.0,10.0
-163,MetroStore Portland Square,Portland,Department,55,2985,0,2008,West,0,139,3.5,0,1,8.9,37237.0,8.4665456262505
-164,OnTheRun Denver Plaza,Denver,Convenience,19,472,1,1998,Central,2020,29,2.7,0,2,1.3,12407.0,4.4571928993967305
-165,OnTheRun Jacksonville Center,Jacksonville,Convenience,24,717,1,2010,East,2013,23,2.9,1,3,1.8,27193.0,1.6789556008028446
-166,PriceCutter Phoenix Square,Phoenix,Hypermarket,85,3958,0,2022,West,2022,140,2.7,1,2,4.0,67652.0,2.8024353870780607
-167,TheGalleria Las Vegas Mart,Las Vegas,Department,71,3226,0,2007,West,2014,147,2.5,1,5,5.7,51989.0,5.798641655486268
-168,ValueSave San Francisco Hub,San Francisco,Supermarket,53,2445,1,2006,West,2014,93,2.4,1,2,16.8,55488.0,0.7754717718443507
-169,MiniMarket Buffalo Hub,Buffalo,Convenience,3,411,0,2003,North,0,16,2.7,1,5,4.4,10850.0,0.9671530789956044
-170,MetroStore Chicago Point,Chicago,Department,42,1353,0,1987,North,0,59,2.3,1,5,3.4,39857.0,0.2224709314879462
-171,TheGalleria San Antonio Center,San Antonio,Department,54,2724,1,2003,South,2023,95,2.8,0,2,19.2,65617.0,0.6529969024349794
-172,GlobalHyper Jacksonville Plaza,Jacksonville,Hypermarket,89,4310,0,1993,East,0,168,3.2,1,2,16.9,93406.0,10.0
-173,EasyBuy Phoenix Mart,Phoenix,Convenience,5,317,1,2012,West,2023,25,2.5,0,5,11.2,9482.0,1.1039597519458502
-174,OnTheRun Phoenix Market,Phoenix,Convenience,13,241,0,2004,West,2013,21,2.3,1,3,14.0,7209.0,1.1259011218026793
-175,FreshMart Pittsburgh Square,Pittsburgh,Supermarket,21,1170,0,1991,North,0,58,2.5,1,5,8.1,19798.0,2.4140852549310083
-176,EasyBuy Kansas City Plaza,Kansas City,Convenience,3,720,0,1998,Central,0,11,3.1,0,4,12.3,22110.0,0.238193295586503
-177,BigBox Miami Square,Miami,Hypermarket,97,4687,1,1993,South,0,183,3.4,1,5,12.9,103358.0,5.126678728167438
-178,OnTheRun Seattle Square,Seattle,Convenience,14,512,0,2003,North,2022,14,2.7,1,3,10.0,20791.0,7.535975049651952
-179,DailyGrocer Richmond Plaza,Richmond,Supermarket,56,1768,1,1998,East,2011,77,2.3,1,4,22.7,37770.0,2.592844455770974
-180,CityFood St. Louis Market,St. Louis,Supermarket,37,2132,0,2022,Central,2022,90,3.4,1,1,0.9,63831.0,10.0
-181,GlobalHyper New York Hub,New York,Hypermarket,59,3153,1,2020,North,0,128,3.2,1,1,19.7,41499.0,0.3354782613803613
-182,FastShop San Diego Plaza,San Diego,Convenience,3,505,0,2001,West,0,57,2.4,1,3,3.5,18270.0,10.0
-183,QuickStop Seattle Square,Seattle,Convenience,3,340,0,2014,North,2014,9,3.1,0,5,20.0,13807.0,0.6859917456727986
-184,PriceCutter Richmond Hub,Richmond,Hypermarket,105,4328,1,1993,East,0,167,2.9,1,2,15.6,73967.0,0.35490551498085354
-185,EasyBuy New York Hub,New York,Convenience,15,156,0,2017,North,2020,0,2.7,1,3,21.2,3593.0,1.2400226512063475
-186,EasyBuy Las Vegas Center,Las Vegas,Convenience,7,282,0,2009,West,2010,0,2.8,0,4,2.9,6362.0,10.0
-187,FreshMart Columbus Mart,Columbus,Supermarket,34,1736,1,1998,Central,2010,51,2.5,0,4,14.2,24868.0,1.6107009081226538
-188,OnTheRun Sacramento Center,Sacramento,Convenience,18,180,0,1995,West,2012,0,3.2,1,1,12.8,7352.0,0.5384234277895488
-189,FastShop Phoenix Mart,Phoenix,Convenience,16,684,1,2019,West,2019,47,3.0,1,4,17.8,20460.0,0.34856485470677123
-190,SuperSaver Las Vegas Point,Las Vegas,Hypermarket,79,3189,0,1998,West,2023,128,3.1,1,3,13.6,41114.0,1.4533304638915028
-191,GiantStore Austin Mart,Austin,Hypermarket,96,4539,1,2014,South,2014,184,2.8,1,4,13.7,87478.0,0.15047566746029642
-192,UrbanMall Milwaukee Point,Milwaukee,Department,27,1211,0,1988,Central,0,46,2.2,0,3,11.0,28006.0,0.34637564629716644
-193,DailyGrocer Cleveland Mart,Cleveland,Supermarket,16,1185,0,1988,Central,2015,52,2.5,0,2,8.1,21860.0,10.0
-194,EasyBuy Dallas Point,Dallas,Convenience,20,700,1,2012,South,0,49,3.0,1,1,12.3,13763.0,8.068088332896991
-195,MiniMarket San Antonio Hub,San Antonio,Convenience,6,231,1,1992,South,0,0,2.3,0,4,3.4,7790.0,1.4132689483881704
-196,CityCenter Phoenix Point,Phoenix,Department,59,2999,0,1986,West,2023,138,3.0,0,3,24.1,64075.0,0.942897473979045
-197,OnTheRun Baltimore Plaza,Baltimore,Convenience,3,407,0,2006,East,2019,0,2.9,0,5,18.0,14759.0,1.7686396340780643
-198,DailyGrocer Richmond Market,Richmond,Supermarket,65,2352,1,2000,East,2023,94,2.5,1,1,23.8,50246.0,10.0
-199,MetroStore Washington DC Market,Washington DC,Department,58,1909,0,2013,East,2013,109,3.2,1,2,6.1,52191.0,2.6804122585901693
-200,ValueSave Kansas City Plaza,Kansas City,Supermarket,36,1738,1,2014,Central,2014,79,2.3,0,3,22.0,38122.0,4.912022689105686
+-1,Unknown Store,Unknown,Unknown,0,0,0,1900,Unknown,0,0,0.0,0,1,0.0,0.00,1.0000
+1,FastShop New York Market,New York,Convenience,20,686,1,2006,North,2011,28,2.9,0,4,4.8,15801.00,4.8756
+2,TheGalleria Atlanta Square,Atlanta,Department,30,2075,0,1999,South,0,89,2.8,0,3,5.7,52006.00,1.6867
+3,ValueSave Chicago Point,Chicago,Supermarket,22,1128,0,2005,North,2019,47,3.0,1,3,0.8,33229.00,0.8682
+4,QuickStop New York Plaza,New York,Convenience,3,417,0,1999,North,2014,0,2.2,0,4,0.8,9605.00,0.2742
+5,MiniMarket Houston Plaza,Houston,Convenience,12,720,0,2006,South,2016,35,2.3,1,5,20.8,22686.00,0.6395
+6,TheGalleria Indianapolis Point,Indianapolis,Department,36,1863,1,2012,Central,0,43,3.2,1,2,18.4,32736.00,4.0247
+7,FreshMart Cleveland Mart,Cleveland,Supermarket,52,2373,1,1998,Central,0,83,2.7,0,1,9.2,43775.00,1.2781
+8,DailyGrocer Orlando Market,Orlando,Supermarket,47,2242,1,2011,South,2012,97,2.3,1,5,17.6,35927.00,0.9878
+9,EasyBuy Atlanta Center,Atlanta,Convenience,6,437,0,2012,South,2018,26,2.2,1,4,10.2,15334.00,3.0094
+10,MegaMart Buffalo Market,Buffalo,Hypermarket,112,4650,0,2010,North,2013,173,2.9,0,1,23.8,70144.00,6.6182
+11,EasyBuy Washington DC Mart,Washington DC,Convenience,16,550,0,1986,East,0,15,3.2,1,3,24.2,21051.00,2.2446
+12,MiniMarket Pittsburgh Center,Pittsburgh,Convenience,3,235,0,2009,North,2021,0,2.7,1,2,10.1,5567.00,2.4047
+13,MiniMarket Los Angeles Market,Los Angeles,Convenience,4,399,1,1987,West,0,14,3.1,0,3,21.4,10909.00,8.5526
+14,MiniMarket Columbus Plaza,Columbus,Convenience,15,540,0,1992,Central,2023,21,2.8,1,4,19.4,10830.00,2.0353
+15,MetroStore New York Plaza,New York,Department,31,1262,0,2017,North,0,60,2.8,1,1,8.1,20763.00,1.1375
+16,CityFood Philadelphia Mart,Philadelphia,Supermarket,45,2282,0,2019,East,2019,83,2.6,0,4,6.2,31134.00,3.6978
+17,TownSquare Buffalo Point,Buffalo,Department,39,1861,1,1990,North,0,80,3.0,1,1,11.7,35091.00,1.2117
+18,TownSquare Baltimore Market,Baltimore,Department,90,3403,1,2007,East,2022,143,2.7,0,5,19.6,88144.00,1.0604
+19,MetroStore Austin Square,Austin,Department,55,2692,1,2009,South,2012,110,3.4,1,2,24.0,64852.00,7.6025
+20,MiniMarket Boston Square,Boston,Convenience,29,626,0,2003,North,0,21,3.1,1,5,19.2,22530.00,1.1614
+21,BigBox Miami Point,Miami,Hypermarket,94,3858,0,1989,South,0,157,2.9,0,5,21.5,85077.00,0.1000
+22,GoodMart Tampa Hub,Tampa,Supermarket,61,2143,1,1995,East,0,96,3.5,0,4,15.3,46072.00,2.4958
+23,MegaMart Nashville Plaza,Nashville,Hypermarket,62,3041,1,1996,South,0,134,3.4,1,2,21.0,43162.00,1.0257
+24,UrbanMall Minneapolis Market,Minneapolis,Department,28,1347,0,1994,North,2022,81,3.0,1,1,19.7,28847.00,1.1654
+25,GrandPlaza Seattle Square,Seattle,Department,30,1541,1,1992,North,2012,46,2.3,1,1,9.7,44698.00,2.8392
+26,PriceCutter Baltimore Point,Baltimore,Hypermarket,113,4680,1,2008,East,2019,180,3.2,0,3,14.0,96976.00,1.3508
+27,BigBox Las Vegas Plaza,Las Vegas,Hypermarket,68,3296,1,2012,West,2016,107,3.0,1,1,20.2,42494.00,2.1338
+28,SuperSaver Baltimore Square,Baltimore,Hypermarket,64,2637,1,2020,East,2020,119,2.7,1,4,1.6,54642.00,0.1456
+29,MetroStore Cleveland Hub,Cleveland,Department,39,1526,0,2021,Central,0,56,2.3,1,5,20.3,28150.00,0.5317
+30,UrbanMall Portland Market,Portland,Department,66,2992,0,2005,West,0,122,3.3,0,5,4.9,37324.00,8.8884
+31,ValueSave Miami Point,Miami,Supermarket,44,1524,0,1992,South,2019,51,2.4,1,5,13.1,42009.00,1.6124
+32,FreshMart New York Plaza,New York,Supermarket,45,1988,1,1993,North,2023,74,3.0,1,2,20.3,32707.00,0.2213
+33,GrandPlaza Orlando Center,Orlando,Department,83,3462,1,1999,South,0,156,3.6,0,1,6.7,55478.00,0.4552
+34,GiantStore San Diego Point,San Diego,Hypermarket,84,3973,1,2002,West,0,169,3.6,1,4,6.5,82135.00,0.5010
+35,GiantStore Cleveland Mart,Cleveland,Hypermarket,54,2704,0,2004,Central,2012,106,2.7,0,2,10.4,39904.00,1.8642
+36,GoodMart Chicago Hub,Chicago,Supermarket,25,877,1,1990,North,2023,46,3.2,1,3,22.4,25835.00,0.9811
+37,MetroStore Richmond Market,Richmond,Department,39,1628,1,1996,East,0,76,2.2,1,4,0.5,34779.00,0.7475
+38,MarketPlace Detroit Plaza,Detroit,Supermarket,32,1373,1,1986,North,2011,49,2.2,0,4,22.6,39964.00,1.6565
+39,GoodMart Los Angeles Square,Los Angeles,Supermarket,17,931,1,1991,West,2021,15,2.8,1,4,4.3,18181.00,2.9250
+40,CornerShop Washington DC Hub,Washington DC,Convenience,27,676,1,2000,East,0,13,2.6,1,5,24.8,25874.00,1.2082
+41,FastShop Detroit Hub,Detroit,Convenience,5,646,0,1987,North,0,5,2.5,0,4,23.9,26325.00,0.8272
+42,CornerShop Denver Market,Denver,Convenience,5,665,0,1987,Central,2015,44,2.7,1,1,12.6,17481.00,0.9942
+43,GiantStore Houston Market,Houston,Hypermarket,106,4435,0,2011,South,2022,197,2.9,1,4,13.1,79851.00,2.4788
+44,CityCenter Los Angeles Market,Los Angeles,Department,55,2187,0,2022,West,0,111,2.6,1,5,12.3,42709.00,1.6342
+45,CityCenter Baltimore Plaza,Baltimore,Department,54,2336,1,2017,East,2017,63,2.9,0,4,16.1,60506.00,4.1403
+46,CityCenter St. Louis Square,St. Louis,Department,72,3361,1,2012,Central,2012,150,3.3,1,3,2.7,100627.00,0.4149
+47,CityCenter Sacramento Mart,Sacramento,Department,68,2901,0,1985,West,2012,149,3.2,1,3,1.3,84631.00,0.6502
+48,CornerShop Omaha Square,Omaha,Convenience,26,575,0,1992,Central,2015,39,2.5,0,5,1.9,16798.00,4.1694
+49,SuperSaver Portland Market,Portland,Hypermarket,90,3166,1,2021,West,2021,94,3.0,1,1,11.4,31596.00,0.6299
+50,SuperSaver Indianapolis Hub,Indianapolis,Hypermarket,44,2592,0,2016,Central,2016,130,2.5,1,1,7.3,36436.00,8.6782
+51,OnTheRun Austin Square,Austin,Convenience,6,460,0,2021,South,2021,19,2.1,1,2,15.7,15514.00,8.9017
+52,GiantStore Jacksonville Point,Jacksonville,Hypermarket,95,4469,0,1988,East,2015,175,3.5,1,5,24.8,96852.00,8.7652
+53,CornerShop Seattle Center,Seattle,Convenience,28,695,0,2014,North,2014,34,2.5,1,4,10.0,28223.00,0.5731
+54,GrandPlaza Philadelphia Hub,Philadelphia,Department,39,2681,0,1990,East,2020,91,2.5,1,5,14.6,36577.00,1.8081
+55,QuickStop Atlanta Center,Atlanta,Convenience,12,400,0,2003,South,0,16,2.9,0,2,10.7,14035.00,0.9120
+56,CityCenter Seattle Center,Seattle,Department,73,3409,0,2016,North,2020,160,3.2,1,5,21.3,98881.00,4.9918
+57,GrandPlaza Philadelphia Plaza,Philadelphia,Department,87,3334,1,1993,East,2020,142,3.2,1,5,22.6,45486.00,10.0000
+58,MarketPlace Tampa Plaza,Tampa,Supermarket,52,1806,0,1996,East,0,73,2.6,1,2,22.0,38827.00,4.7035
+59,FastShop Omaha Hub,Omaha,Convenience,19,757,1,1995,Central,2012,31,2.4,1,1,24.4,22115.00,1.6669
+60,CityFood Milwaukee Mart,Milwaukee,Supermarket,23,1620,0,2000,Central,2011,47,2.4,1,4,1.2,37465.00,1.0633
+61,OnTheRun Sacramento Plaza,Sacramento,Convenience,3,178,0,1985,West,0,4,2.2,1,2,21.1,7270.00,3.5927
+62,FastShop Chicago Point,Chicago,Convenience,10,626,1,2005,North,2011,0,2.8,1,3,18.9,25817.00,0.3801
+63,MarketPlace Jacksonville Point,Jacksonville,Supermarket,30,1862,0,2014,East,0,89,3.2,1,1,6.1,50441.00,3.1381
+64,FreshMart Chicago Point,Chicago,Supermarket,31,997,0,1997,North,0,7,3.0,1,3,23.9,29370.00,0.5501
+65,QuickStop Richmond Plaza,Richmond,Convenience,3,421,0,2018,East,2020,29,3.0,0,1,4.1,12591.00,3.4717
+66,GiantStore Atlanta Point,Atlanta,Hypermarket,122,4796,1,1988,South,0,206,3.2,0,4,17.1,96162.00,1.3592
+67,TheGalleria Orlando Market,Orlando,Department,49,1527,0,2012,South,2020,80,3.1,1,4,6.0,24470.00,1.0347
+68,FreshMart San Francisco Point,San Francisco,Supermarket,41,2002,0,2022,West,2022,81,2.7,0,5,11.1,45434.00,0.5697
+69,MegaMart Kansas City Mart,Kansas City,Hypermarket,108,4761,1,2015,Central,2021,204,3.3,0,3,18.1,83543.00,1.0746
+70,BigBox San Francisco Center,San Francisco,Hypermarket,105,4786,0,2011,West,2014,189,3.2,0,1,14.3,86892.00,3.2135
+71,FreshMart Orlando Point,Orlando,Supermarket,58,2323,1,1989,South,0,75,2.5,0,4,11.0,37225.00,5.7698
+72,BigBox Richmond Market,Richmond,Hypermarket,119,4897,1,2009,East,2017,218,3.2,0,2,8.5,83691.00,3.1010
+73,GoodMart Las Vegas Mart,Las Vegas,Supermarket,56,2446,1,1987,West,0,96,3.5,1,4,21.1,39419.00,8.4711
+74,SuperSaver Milwaukee Plaza,Milwaukee,Hypermarket,60,2547,0,2017,Central,2017,80,2.6,0,2,4.0,47122.00,10.0000
+75,CityCenter Baltimore Hub,Baltimore,Department,25,1381,1,1988,East,2022,48,2.3,1,1,11.0,35770.00,1.1170
+76,MetroStore Kansas City Market,Kansas City,Department,50,2109,0,2009,Central,0,77,2.8,1,4,22.6,46259.00,1.2878
+77,MiniMarket New York Point,New York,Convenience,12,525,0,2004,North,2010,27,3.0,1,4,21.2,12092.00,0.2929
+78,CityCenter Omaha Hub,Omaha,Department,40,2143,0,2018,Central,2018,120,3.0,0,1,10.3,44719.00,6.8817
+79,QuickStop Boston Hub,Boston,Convenience,6,295,1,2010,North,2021,19,2.9,1,4,19.2,10617.00,7.8403
+80,UrbanMall Seattle Center,Seattle,Department,69,3254,0,1989,North,2016,133,2.6,1,2,20.7,94385.00,0.5824
+81,ValueSave Denver Hub,Denver,Supermarket,25,1349,0,2019,Central,0,90,2.9,1,4,22.3,25329.00,3.4597
+82,UrbanMall Chicago Square,Chicago,Department,34,1974,0,2012,North,2016,93,2.6,1,3,13.8,58151.00,7.1028
+83,EasyBuy Columbus Plaza,Columbus,Convenience,12,548,1,2013,Central,0,25,3.1,1,5,5.5,10990.00,2.1631
+84,EasyBuy Baltimore Point,Baltimore,Convenience,4,493,1,1993,East,2017,12,2.8,0,2,6.8,17877.00,4.5580
+85,BigBox Austin Market,Austin,Hypermarket,53,2555,1,2022,South,2023,106,2.6,1,3,7.7,49241.00,2.0336
+86,MarketPlace New York Hub,New York,Supermarket,58,2234,0,1990,North,2017,88,2.4,1,1,15.0,36754.00,0.3828
+87,CityCenter St. Louis Hub,St. Louis,Department,60,2508,0,2003,Central,2021,101,2.4,1,2,1.3,75088.00,5.8079
+88,SuperSaver Austin Market,Austin,Hypermarket,58,2973,1,1995,South,0,138,2.8,1,5,16.1,57297.00,8.0859
+89,TownSquare Seattle Market,Seattle,Department,40,1713,0,1986,North,2017,60,2.5,0,5,9.4,49687.00,3.9805
+90,GrandPlaza San Antonio Square,San Antonio,Department,70,3120,0,1993,South,2020,132,3.2,1,1,7.7,75156.00,0.5245
+91,PriceCutter Washington DC Hub,Washington DC,Hypermarket,77,2864,1,2005,East,0,128,3.0,0,1,22.0,62640.00,0.6694
+92,PriceCutter Detroit Center,Detroit,Hypermarket,78,3025,1,2008,North,2021,111,2.7,0,2,11.8,70440.00,0.4246
+93,MegaMart Austin Center,Austin,Hypermarket,72,3835,1,2018,South,0,141,2.6,0,4,2.8,73910.00,4.1536
+94,GlobalHyper Omaha Market,Omaha,Hypermarket,82,3382,1,2006,Central,2016,133,2.6,0,1,20.8,56458.00,7.5539
+95,PriceCutter Denver Market,Denver,Hypermarket,88,3530,1,1987,Central,2019,134,3.5,1,4,1.7,53024.00,2.7439
+96,GrandPlaza Austin Point,Austin,Department,39,1595,0,1996,South,2016,81,2.5,0,3,18.3,38425.00,5.0970
+97,MegaMart Richmond Center,Richmond,Hypermarket,89,4146,0,2012,East,0,150,3.3,0,5,19.5,70857.00,0.5821
+98,DailyGrocer Sacramento Center,Sacramento,Supermarket,63,1982,1,2014,West,2015,80,3.3,1,4,9.1,57821.00,1.9641
+99,CornerShop Minneapolis Square,Minneapolis,Convenience,21,733,0,2010,North,2014,67,2.9,1,5,20.7,21977.00,0.3186
+100,GiantStore Indianapolis Center,Indianapolis,Hypermarket,110,4274,1,2005,Central,2021,177,3.6,1,4,13.1,60080.00,0.6530
+101,MetroStore Chicago Plaza,Chicago,Department,76,2957,0,2012,North,2012,126,2.9,1,3,11.9,87109.00,4.7323
+102,GlobalHyper Kansas City Hub,Kansas City,Hypermarket,101,4406,0,2010,Central,0,193,3.7,1,1,1.6,77314.00,1.2367
+103,BigBox Omaha Plaza,Omaha,Hypermarket,77,3715,1,2017,Central,2018,141,2.6,0,3,7.6,62017.00,7.0375
+104,GlobalHyper Detroit Mart,Detroit,Hypermarket,92,4154,1,2005,North,2011,149,2.6,0,1,23.3,96730.00,3.1442
+105,TheGalleria Minneapolis Square,Minneapolis,Department,58,2723,1,2019,North,2019,111,3.1,1,1,10.1,58315.00,10.0000
+106,GlobalHyper Dallas Mart,Dallas,Hypermarket,91,4575,0,2018,South,2018,186,3.7,0,5,13.9,51401.00,1.8451
+107,MiniMarket Indianapolis Square,Indianapolis,Convenience,13,375,1,2002,Central,2021,0,3.0,1,3,13.5,9225.00,0.3049
+108,TheGalleria Atlanta Mart,Atlanta,Department,52,1792,0,1995,South,2015,77,2.4,0,4,15.0,44913.00,1.5818
+109,QuickStop Orlando Plaza,Orlando,Convenience,12,655,0,2007,South,2013,42,2.4,0,3,2.0,14695.00,0.5191
+110,UrbanMall Richmond Mart,Richmond,Department,46,1327,0,2006,East,0,39,3.3,1,5,9.4,28349.00,5.3261
+111,SuperSaver Austin Mart,Austin,Hypermarket,70,3754,0,2001,South,0,156,2.7,1,1,18.2,72349.00,1.7339
+112,QuickStop Buffalo Mart,Buffalo,Convenience,12,203,0,1989,North,0,21,3.0,1,5,5.4,5359.00,1.3983
+113,TheGalleria San Francisco Mart,San Francisco,Department,45,1436,1,1995,West,0,66,3.2,1,2,5.5,32589.00,1.4205
+114,DailyGrocer Phoenix Mart,Phoenix,Supermarket,30,1426,1,2014,West,2016,67,2.8,0,2,0.7,30467.00,4.0085
+115,MegaMart Atlanta Square,Atlanta,Hypermarket,102,4692,1,1999,South,2018,184,3.1,0,4,11.2,94076.00,0.9580
+116,TownSquare Orlando Market,Orlando,Department,63,2501,0,2011,South,2013,83,2.9,1,5,22.1,40078.00,4.1890
+117,DailyGrocer Detroit Square,Detroit,Supermarket,39,1593,1,2019,North,2020,57,2.5,1,4,1.8,46368.00,5.7816
+118,MetroStore Indianapolis Mart,Indianapolis,Department,20,1641,1,2017,Central,2023,56,3.2,0,4,5.2,28835.00,1.0936
+119,FreshMart Columbus Center,Columbus,Supermarket,12,868,1,2004,Central,2020,33,2.6,1,2,8.1,12434.00,0.5427
+120,GiantStore Baltimore Market,Baltimore,Hypermarket,103,4656,0,2000,East,2017,202,3.7,0,4,18.4,96479.00,0.8909
+121,MiniMarket Chicago Point,Chicago,Convenience,3,294,0,2018,North,2018,0,2.1,1,2,16.2,12125.00,3.8657
+122,DailyGrocer Tampa Point,Tampa,Supermarket,42,2077,0,1986,East,2012,85,3.4,0,1,10.7,44653.00,1.8422
+123,UrbanMall St. Louis Hub,St. Louis,Department,62,3289,0,2019,Central,0,115,2.9,1,5,19.1,98471.00,3.5117
+124,MegaMart Austin Square,Austin,Hypermarket,55,2610,0,2012,South,2012,93,2.4,1,4,15.4,50301.00,10.0000
+125,ValueSave Los Angeles Mart,Los Angeles,Supermarket,40,1957,1,1990,West,2022,86,2.3,0,2,22.5,38217.00,2.1753
+126,TownSquare Denver Point,Denver,Department,75,3281,0,1993,Central,2019,113,3.3,1,3,20.5,61605.00,0.6245
+127,GrandPlaza Minneapolis Market,Minneapolis,Department,63,2900,0,2004,North,0,127,3.2,1,4,6.7,62106.00,5.8644
+128,GrandPlaza Detroit Market,Detroit,Department,61,2601,0,1985,North,2012,83,3.3,0,1,7.2,75708.00,1.7535
+129,MarketPlace Phoenix Square,Phoenix,Supermarket,28,1145,0,1992,West,2020,55,2.3,0,1,3.6,24464.00,4.6971
+130,CityFood Washington DC Plaza,Washington DC,Supermarket,32,1101,0,2007,East,0,20,2.2,0,3,8.8,30101.00,5.9265
+131,MarketPlace Las Vegas Square,Las Vegas,Supermarket,32,1162,0,1987,West,2010,37,2.8,0,2,25.0,18726.00,0.5216
+132,OnTheRun Austin Hub,Austin,Convenience,23,766,0,1988,South,2020,59,2.6,1,4,10.4,25835.00,8.6573
+133,DailyGrocer Detroit Plaza,Detroit,Supermarket,47,1017,1,2009,North,2011,66,2.8,1,2,5.9,29602.00,4.8849
+134,ValueSave Sacramento Hub,Sacramento,Supermarket,23,940,1,2022,West,0,31,3.3,1,1,19.2,27423.00,0.7988
+135,FastShop San Antonio Plaza,San Antonio,Convenience,36,690,0,1999,South,2014,33,3.3,0,2,13.8,23269.00,2.3758
+136,ValueSave Detroit Square,Detroit,Supermarket,42,1757,0,2005,North,2021,88,3.4,0,1,4.2,51142.00,2.2449
+137,CityCenter Columbus Mart,Columbus,Department,65,2972,1,2019,Central,2019,129,3.3,0,2,9.8,42574.00,1.6968
+138,CityFood Austin Mart,Austin,Supermarket,36,1784,0,1998,South,0,67,2.6,1,3,10.7,42978.00,4.6941
+139,CityCenter Miami Center,Miami,Department,48,1654,0,2020,South,2020,54,2.7,1,5,19.0,45593.00,9.2519
+140,GrandPlaza San Antonio Mart,San Antonio,Department,77,2908,1,1996,South,2012,129,3.1,0,3,1.0,70049.00,1.6632
+141,UrbanMall Pittsburgh Square,Pittsburgh,Department,47,1901,0,2001,North,2014,93,3.3,1,3,7.1,32167.00,8.1422
+142,FastShop Denver Square,Denver,Convenience,13,189,1,1993,Central,2018,33,2.2,1,5,13.2,4968.00,5.3970
+143,OnTheRun San Diego Plaza,San Diego,Convenience,5,686,0,2019,West,0,2,2.5,1,5,7.1,24818.00,2.1788
+144,QuickStop Houston Mart,Houston,Convenience,3,410,0,1997,South,2021,0,2.1,1,4,15.9,12918.00,2.0369
+145,CityFood San Francisco Mart,San Francisco,Supermarket,50,1803,0,1999,West,0,89,2.9,1,4,12.3,40918.00,0.4135
+146,CityCenter Milwaukee Hub,Milwaukee,Department,41,1892,1,2002,Central,2010,52,3.3,1,3,9.4,43755.00,0.2723
+147,OnTheRun Dallas Plaza,Dallas,Convenience,12,273,0,2017,South,0,29,3.0,1,3,23.8,5368.00,2.0098
+148,MiniMarket Las Vegas Hub,Las Vegas,Convenience,3,187,0,1990,West,2010,4,2.3,1,1,16.0,4219.00,0.5903
+149,MarketPlace Columbus Hub,Columbus,Supermarket,56,1956,1,2011,Central,2013,70,3.5,0,1,3.7,28019.00,1.5721
+150,MiniMarket Indianapolis Point,Indianapolis,Convenience,3,400,0,2007,Central,2013,19,2.8,0,4,14.2,9840.00,0.8680
+151,MarketPlace San Antonio Market,San Antonio,Supermarket,9,926,0,2011,South,0,16,2.1,0,4,19.6,22306.00,0.1928
+152,GiantStore Austin Point,Austin,Hypermarket,77,2967,1,2018,South,2018,131,2.7,1,1,17.9,57181.00,2.5314
+153,OnTheRun Austin Center,Austin,Convenience,3,603,0,2022,South,0,49,2.4,0,1,4.7,20337.00,1.0026
+154,GlobalHyper Baltimore Market,Baltimore,Hypermarket,60,2574,1,1998,East,2018,116,2.4,1,2,24.3,53337.00,1.8153
+155,FreshMart Washington DC Plaza,Washington DC,Supermarket,48,2201,1,2020,East,2022,84,3.4,1,2,11.5,60174.00,0.5645
+156,UrbanMall Atlanta Square,Atlanta,Department,50,2533,1,1992,South,0,78,2.9,1,1,4.4,63484.00,1.1032
+157,QuickStop Atlanta Point,Atlanta,Convenience,4,263,0,2019,South,2019,0,3.1,0,2,4.9,9228.00,10.0000
+158,ValueSave Phoenix Point,Phoenix,Supermarket,34,1852,1,2003,West,2010,54,2.6,1,5,2.9,39569.00,1.9237
+159,TheGalleria Los Angeles Mart,Los Angeles,Department,55,1957,0,2014,West,0,78,2.4,1,4,20.2,38217.00,3.1883
+160,GrandPlaza San Diego Square,San Diego,Department,50,1605,1,1998,West,2010,65,2.8,1,4,3.5,41476.00,0.3588
+161,BigBox Buffalo Center,Buffalo,Hypermarket,71,3446,0,2004,North,2019,150,2.6,0,1,3.6,51982.00,10.0000
+162,MarketPlace Charlotte Mart,Charlotte,Supermarket,37,1578,0,2009,East,2015,36,2.8,1,3,21.3,20220.00,10.0000
+163,MetroStore Portland Square,Portland,Department,55,2985,0,2008,West,0,139,3.5,0,1,8.9,37237.00,8.4665
+164,OnTheRun Denver Plaza,Denver,Convenience,19,472,1,1998,Central,2020,29,2.7,0,2,1.3,12407.00,4.4572
+165,OnTheRun Jacksonville Center,Jacksonville,Convenience,24,717,1,2010,East,2013,23,2.9,1,3,1.8,27193.00,1.6790
+166,PriceCutter Phoenix Square,Phoenix,Hypermarket,85,3958,0,2022,West,2022,140,2.7,1,2,4.0,67652.00,2.8024
+167,TheGalleria Las Vegas Mart,Las Vegas,Department,71,3226,0,2007,West,2014,147,2.5,1,5,5.7,51989.00,5.7986
+168,ValueSave San Francisco Hub,San Francisco,Supermarket,53,2445,1,2006,West,2014,93,2.4,1,2,16.8,55488.00,0.7755
+169,MiniMarket Buffalo Hub,Buffalo,Convenience,3,411,0,2003,North,0,16,2.7,1,5,4.4,10850.00,0.9672
+170,MetroStore Chicago Point,Chicago,Department,42,1353,0,1987,North,0,59,2.3,1,5,3.4,39857.00,0.2225
+171,TheGalleria San Antonio Center,San Antonio,Department,54,2724,1,2003,South,2023,95,2.8,0,2,19.2,65617.00,0.6530
+172,GlobalHyper Jacksonville Plaza,Jacksonville,Hypermarket,89,4310,0,1993,East,0,168,3.2,1,2,16.9,93406.00,10.0000
+173,EasyBuy Phoenix Mart,Phoenix,Convenience,5,317,1,2012,West,2023,25,2.5,0,5,11.2,9482.00,1.1040
+174,OnTheRun Phoenix Market,Phoenix,Convenience,13,241,0,2004,West,2013,21,2.3,1,3,14.0,7209.00,1.1259
+175,FreshMart Pittsburgh Square,Pittsburgh,Supermarket,21,1170,0,1991,North,0,58,2.5,1,5,8.1,19798.00,2.4141
+176,EasyBuy Kansas City Plaza,Kansas City,Convenience,3,720,0,1998,Central,0,11,3.1,0,4,12.3,22110.00,0.2382
+177,BigBox Miami Square,Miami,Hypermarket,97,4687,1,1993,South,0,183,3.4,1,5,12.9,103358.00,5.1267
+178,OnTheRun Seattle Square,Seattle,Convenience,14,512,0,2003,North,2022,14,2.7,1,3,10.0,20791.00,7.5360
+179,DailyGrocer Richmond Plaza,Richmond,Supermarket,56,1768,1,1998,East,2011,77,2.3,1,4,22.7,37770.00,2.5928
+180,CityFood St. Louis Market,St. Louis,Supermarket,37,2132,0,2022,Central,2022,90,3.4,1,1,0.9,63831.00,10.0000
+181,GlobalHyper New York Hub,New York,Hypermarket,59,3153,1,2020,North,0,128,3.2,1,1,19.7,41499.00,0.3355
+182,FastShop San Diego Plaza,San Diego,Convenience,3,505,0,2001,West,0,57,2.4,1,3,3.5,18270.00,10.0000
+183,QuickStop Seattle Square,Seattle,Convenience,3,340,0,2014,North,2014,9,3.1,0,5,20.0,13807.00,0.6860
+184,PriceCutter Richmond Hub,Richmond,Hypermarket,105,4328,1,1993,East,0,167,2.9,1,2,15.6,73967.00,0.3549
+185,EasyBuy New York Hub,New York,Convenience,15,156,0,2017,North,2020,0,2.7,1,3,21.2,3593.00,1.2400
+186,EasyBuy Las Vegas Center,Las Vegas,Convenience,7,282,0,2009,West,2010,0,2.8,0,4,2.9,6362.00,10.0000
+187,FreshMart Columbus Mart,Columbus,Supermarket,34,1736,1,1998,Central,2010,51,2.5,0,4,14.2,24868.00,1.6107
+188,OnTheRun Sacramento Center,Sacramento,Convenience,18,180,0,1995,West,2012,0,3.2,1,1,12.8,7352.00,0.5384
+189,FastShop Phoenix Mart,Phoenix,Convenience,16,684,1,2019,West,2019,47,3.0,1,4,17.8,20460.00,0.3486
+190,SuperSaver Las Vegas Point,Las Vegas,Hypermarket,79,3189,0,1998,West,2023,128,3.1,1,3,13.6,41114.00,1.4533
+191,GiantStore Austin Mart,Austin,Hypermarket,96,4539,1,2014,South,2014,184,2.8,1,4,13.7,87478.00,0.1505
+192,UrbanMall Milwaukee Point,Milwaukee,Department,27,1211,0,1988,Central,0,46,2.2,0,3,11.0,28006.00,0.3464
+193,DailyGrocer Cleveland Mart,Cleveland,Supermarket,16,1185,0,1988,Central,2015,52,2.5,0,2,8.1,21860.00,10.0000
+194,EasyBuy Dallas Point,Dallas,Convenience,20,700,1,2012,South,0,49,3.0,1,1,12.3,13763.00,8.0681
+195,MiniMarket San Antonio Hub,San Antonio,Convenience,6,231,1,1992,South,0,0,2.3,0,4,3.4,7790.00,1.4133
+196,CityCenter Phoenix Point,Phoenix,Department,59,2999,0,1986,West,2023,138,3.0,0,3,24.1,64075.00,0.9429
+197,OnTheRun Baltimore Plaza,Baltimore,Convenience,3,407,0,2006,East,2019,0,2.9,0,5,18.0,14759.00,1.7686
+198,DailyGrocer Richmond Market,Richmond,Supermarket,65,2352,1,2000,East,2023,94,2.5,1,1,23.8,50246.00,10.0000
+199,MetroStore Washington DC Market,Washington DC,Department,58,1909,0,2013,East,2013,109,3.2,1,2,6.1,52191.00,2.6804
+200,ValueSave Kansas City Plaza,Kansas City,Supermarket,36,1738,1,2014,Central,2014,79,2.3,0,3,22.0,38122.00,4.9120

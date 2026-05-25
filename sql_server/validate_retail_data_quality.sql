@@ -1,16 +1,18 @@
 -- ============================================================================
 -- validate_retail_data_quality.sql
 -- ============================================================================
--- Author:           DataGen AI
--- Created:           2026-05-23
--- Last modified:     2026-05-24 02:00:00 UTC
--- Suggested name:    validate_retail_data_quality.sql
+-- Author:           DataGen AI & Assistant
+-- Created:          2026-05-23
+-- Last modified:    2026-05-25 18:45:00 UTC
+-- Suggested name:   validate_retail_data_quality.sql
 -- Description:
 --   Runs a comprehensive battery of data‑quality checks against the
 --   retailanalytics database.  Checks include NULL detection, primary‑key
 --   uniqueness, range validation, referential integrity, business‑rule
 --   compliance (return reasons, delivery days, discount flags, etc.) and
 --   row‑count expectations.
+--   Now fully aligned with our Star Schema (ignores -1 and 0 dummy rows in 
+--   business range validation).
 --   All percentage columns (margin_pct, discount_pct) are treated as
 --   decimal fractions (margin_pct: –0.10 … 0.30, discount_pct: 0.0 … 0.45).
 -- ============================================================================
@@ -45,7 +47,7 @@ CREATE TABLE #dq_checks (
 -- ============================================================================
 -- 1. CHECKS FOR dimdate
 --    - Primary key and date columns must not be NULL.
---    - Dates must fall within the expected range.
+--    - Dates must fall within the expected range (excluding dummy datekey = -1).
 --    - datekey must be unique.
 --    - isholiday, isweekend and year/month must be logically consistent.
 --    - Row count must cover at least one year.
@@ -64,10 +66,10 @@ SELECT 'dimdate', 'Null', 'fulldate_null',
 FROM dbo.dimdate WHERE fulldate IS NULL
 UNION ALL
 SELECT 'dimdate', 'Range', 'fulldate_out_of_range',
-       'fulldate outside expected range (2023-01-01 to today)',
+       'fulldate outside expected range (2023-01-01 to today, excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimdate WHERE fulldate < '2023-01-01' OR fulldate > CAST(GETDATE() AS DATE)
+FROM dbo.dimdate WHERE datekey > 0 AND (fulldate < '2023-01-01' OR fulldate > CAST(GETDATE() AS DATE))
 UNION ALL
 SELECT 'dimdate', 'Uniqueness', 'duplicate_datekey',
        'duplicate datekey',
@@ -82,18 +84,20 @@ SELECT 'dimdate', 'Logical', 'isholiday_invalid',
 FROM dbo.dimdate WHERE isholiday NOT IN (0,1)
 UNION ALL
 SELECT 'dimdate', 'Logical', 'year_month_mismatch',
-       'year/month not consistent with fulldate',
+       'year/month not consistent with fulldate (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimdate WHERE YEAR(fulldate) != year OR MONTH(fulldate) != monthnumber
+FROM dbo.dimdate WHERE datekey > 0 AND (YEAR(fulldate) != year OR MONTH(fulldate) != monthnumber)
 UNION ALL
 SELECT 'dimdate', 'Completeness', 'missing_weekend_flag',
-       'isweekend incorrect (DATEPART weekday logic)',
+       'isweekend incorrect (DATEPART weekday logic, excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimdate
-WHERE (DATEPART(weekday, fulldate) IN (1,7) AND isweekend = 0)
+WHERE datekey > 0 AND (
+   (DATEPART(weekday, fulldate) IN (1,7) AND isweekend = 0)
    OR (DATEPART(weekday, fulldate) NOT IN (1,7) AND isweekend = 1)
+)
 UNION ALL
 SELECT 'dimdate', 'Count', 'date_row_count',
        'Row count of dimdate (should be >= 365)',
@@ -109,12 +113,12 @@ FROM dbo.dimdate;
 
 -- ============================================================================
 -- 2. CHECKS FOR dimcustomer
---    - Primary key not NULL, e‑mail unique, age range 18‑75.
---    - Gender restricted to Male/Female only.
---    - Tier values must be from the predefined set.
---    - Registration date cannot be in the future.
---    - totspend must be non‑negative.
---    - Basic consistency between tier and income.
+--    - Primary key not NULL, e‑mail unique, age range 18‑75 (excluding dummy).
+--    - Gender restricted to Male/Female only (excluding dummy).
+--    - Tier values must be from the predefined set (excluding dummy).
+--    - Registration date cannot be in the future (excluding dummy).
+--    - totspend must be non‑negative (excluding dummy).
+--    - Basic consistency between tier and income (excluding dummy).
 -- ============================================================================
 INSERT INTO #dq_checks
 SELECT 'dimcustomer', 'Null', 'customerid_null',
@@ -124,63 +128,63 @@ SELECT 'dimcustomer', 'Null', 'customerid_null',
 FROM dbo.dimcustomer WHERE customerid IS NULL
 UNION ALL
 SELECT 'dimcustomer', 'Uniqueness', 'duplicate_email',
-       'duplicate email address',
-       (SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer),
-       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer) AS NVARCHAR),
-       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer) = 0 THEN 'PASS' ELSE 'FAIL' END
+       'duplicate email address (excluding dummy)',
+       (SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer WHERE customerid > 0),
+       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer WHERE customerid > 0) AS NVARCHAR),
+       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT email) FROM dbo.dimcustomer WHERE customerid > 0) = 0 THEN 'PASS' ELSE 'FAIL' END
 UNION ALL
 SELECT 'dimcustomer', 'Range', 'age_out_of_bounds',
-       'age < 18 or > 75',
+       'age < 18 or > 75 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE age < 18 OR age > 75
+FROM dbo.dimcustomer WHERE customerid > 0 AND (age < 18 OR age > 75)
 UNION ALL
 SELECT 'dimcustomer', 'Value', 'invalid_gender',
-       'gender not Male/Female',
+       'gender not Male/Female (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE gender NOT IN ('Male','Female')
+FROM dbo.dimcustomer WHERE customerid > 0 AND gender NOT IN ('Male','Female')
 UNION ALL
 SELECT 'dimcustomer', 'Value', 'invalid_tier',
-       'tier not in (Bronze, Silver, Gold, Platinum)',
+       'tier not in (Bronze, Silver, Gold, Platinum) (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE tier NOT IN ('Bronze','Silver','Gold','Platinum')
+FROM dbo.dimcustomer WHERE customerid > 0 AND tier NOT IN ('Bronze','Silver','Gold','Platinum')
 UNION ALL
 SELECT 'dimcustomer', 'Logical', 'regdate_future',
-       'regdate later than today',
+       'regdate later than today (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE regdate > CAST(GETDATE() AS DATE)
+FROM dbo.dimcustomer WHERE customerid > 0 AND regdate > CAST(GETDATE() AS DATE)
 UNION ALL
 SELECT 'dimcustomer', 'Logical', 'negative_totalspend',
-       'totalspend < 0',
+       'totalspend < 0 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE totalspend < 0
+FROM dbo.dimcustomer WHERE customerid > 0 AND totalspend < 0
 UNION ALL
 SELECT 'dimcustomer', 'Consistency', 'tier_income_mismatch',
-       'Platinum tier but annualincome < 70000',
+       'Platinum tier but annualincome < 70000 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE tier = 'Platinum' AND annualincome < 70000
+FROM dbo.dimcustomer WHERE customerid > 0 AND tier = 'Platinum' AND annualincome < 70000
 UNION ALL
 SELECT 'dimcustomer', 'Consistency', 'bronze_high_income',
-       'Bronze tier but annualincome > 100000',
+       'Bronze tier but annualincome > 100000 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimcustomer WHERE tier = 'Bronze' AND annualincome > 100000;
+FROM dbo.dimcustomer WHERE customerid > 0 AND tier = 'Bronze' AND annualincome > 100000;
 
 -- ============================================================================
 -- 3. CHECKS FOR dimproduct
---    - Primary key unique, names unique.
---    - Prices positive, costs non‑negative.
+--    - Primary key unique, names unique (excluding dummy).
+--    - Prices positive, costs non‑negative (excluding dummy).
 --    - cost > price is only allowed when margin_pct ≤ 0 (negative‑margin products).
---    - margin_pct must lie in [-0.10, 0.30] (fraction).
---    - tax_rate must be 0.10 or 0.21 (check: inside [0,1]).
---    - Category must be one of the five predefined values.
---    - Warranty flag and months must be consistent.
---    - Discontinued products must be inactive.
+--    - margin_pct must lie in [-0.10, 0.30] (fraction) (excluding dummy).
+--    - tax_rate must be 0.10 or 0.21 (check: inside [0,1]) (excluding dummy).
+--    - Category must be one of the five predefined values (excluding dummy).
+--    - Warranty flag and months must be consistent (excluding dummy).
+--    - Discontinued products must be inactive (excluding dummy).
 -- ============================================================================
 INSERT INTO #dq_checks
 SELECT 'dimproduct', 'Null', 'productid_null',
@@ -190,67 +194,65 @@ SELECT 'dimproduct', 'Null', 'productid_null',
 FROM dbo.dimproduct WHERE productid IS NULL
 UNION ALL
 SELECT 'dimproduct', 'Uniqueness', 'duplicate_name',
-       'duplicate product name',
-       (SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct),
-       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct) AS NVARCHAR),
-       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct) = 0 THEN 'PASS' ELSE 'FAIL' END
+       'duplicate product name (excluding dummy)',
+       (SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct WHERE productid > 0),
+       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct WHERE productid > 0) AS NVARCHAR),
+       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT name) FROM dbo.dimproduct WHERE productid > 0) = 0 THEN 'PASS' ELSE 'FAIL' END
 UNION ALL
 SELECT 'dimproduct', 'Range', 'unitprice_le_0',
-       'unitprice <= 0',
+       'unitprice <= 0 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE unitprice <= 0
+FROM dbo.dimproduct WHERE productid > 0 AND unitprice <= 0
 UNION ALL
 SELECT 'dimproduct', 'Range', 'unitcost_negative',
-       'unitcost < 0',
+       'unitcost < 0 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE unitcost < 0
+FROM dbo.dimproduct WHERE productid > 0 AND unitcost < 0
 UNION ALL
--- cost > price is only an error when margin is positive (logically impossible)
 SELECT 'dimproduct', 'Logical', 'unitcost_gt_unitprice_pos_margin',
-       'unitcost > unitprice while margin > 0 (should be impossible)',
+       'unitcost > unitprice while margin > 0 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE unitcost > unitprice AND margin_pct > 0
+FROM dbo.dimproduct WHERE productid > 0 AND unitcost > unitprice AND margin_pct > 0
 UNION ALL
--- margin_pct must be within the defined fraction range
 SELECT 'dimproduct', 'Range', 'margin_pct_outside_range',
-       'margin_pct not in [-0.10, 0.30] (fraction)',
+       'margin_pct not in [-0.10, 0.30] (fraction) (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE margin_pct < -0.10 OR margin_pct > 0.30
+FROM dbo.dimproduct WHERE productid > 0 AND (margin_pct < -0.10 OR margin_pct > 0.30)
 UNION ALL
 SELECT 'dimproduct', 'Range', 'tax_rate_outside_0_1',
-       'tax_rate not in [0,1]',
+       'tax_rate not in [0,1] (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE tax_rate < 0 OR tax_rate > 1
+FROM dbo.dimproduct WHERE productid > 0 AND (tax_rate < 0 OR tax_rate > 1)
 UNION ALL
 SELECT 'dimproduct', 'Value', 'invalid_category',
-       'category not in (Electronics, Home, Sports, Kids, Garden)',
+       'category not in (Electronics, Home, Sports, Kids, Garden) (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
 FROM dbo.dimproduct
-WHERE category NOT IN ('Electronics','Home','Sports','Kids','Garden')
+WHERE productid > 0 AND category NOT IN ('Electronics','Home','Sports','Kids','Garden')
 UNION ALL
 SELECT 'dimproduct', 'Logical', 'warranty_months_positive',
-       'haswarranty=0 but warrantymonths>0',
+       'haswarranty=0 but warrantymonths>0 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE haswarranty = 0 AND warrantymonths > 0
+FROM dbo.dimproduct WHERE productid > 0 AND haswarranty = 0 AND warrantymonths > 0
 UNION ALL
 SELECT 'dimproduct', 'Logical', 'discontinued_but_active',
-       'isdiscontinued=1 but isactive=1',
+       'isdiscontinued=1 but isactive=1 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimproduct WHERE isdiscontinued = 1 AND isactive = 1;
+FROM dbo.dimproduct WHERE productid > 0 AND isdiscontinued = 1 AND isactive = 1;
 
 -- ============================================================================
 -- 4. CHECKS FOR dimstore
---    - Primary key unique, names unique.
---    - Renovation year cannot precede opening year.
---    - Staff and rating values must be within reasonable bounds.
+--    - Primary key unique, names unique (excluding dummy).
+--    - Renovation year cannot precede opening year (excluding dummy).
+--    - Staff and rating values must be within reasonable bounds (excluding dummy).
 -- ============================================================================
 INSERT INTO #dq_checks
 SELECT 'dimstore', 'Null', 'storeid_null',
@@ -260,35 +262,35 @@ SELECT 'dimstore', 'Null', 'storeid_null',
 FROM dbo.dimstore WHERE storeid IS NULL
 UNION ALL
 SELECT 'dimstore', 'Uniqueness', 'duplicate_storename',
-       'duplicate store name',
-       (SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore),
-       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore) AS NVARCHAR),
-       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore) = 0 THEN 'PASS' ELSE 'FAIL' END
+       'duplicate store name (excluding dummy)',
+       (SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore WHERE storeid > 0),
+       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore WHERE storeid > 0) AS NVARCHAR),
+       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT storename) FROM dbo.dimstore WHERE storeid > 0) = 0 THEN 'PASS' ELSE 'FAIL' END
 UNION ALL
 SELECT 'dimstore', 'Logical', 'renovation_before_opening',
-       'renovationyear < openingyear (non‑zero)',
+       'renovationyear < openingyear (non‑zero) (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimstore WHERE renovationyear != 0 AND renovationyear < openingyear
+FROM dbo.dimstore WHERE storeid > 0 AND renovationyear != 0 AND renovationyear < openingyear
 UNION ALL
 SELECT 'dimstore', 'Range', 'staff_out_of_bounds',
-       'staff <= 0 or > 500',
+       'staff <= 0 or > 500 (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimstore WHERE staff <= 0 OR staff > 500
+FROM dbo.dimstore WHERE storeid > 0 AND (staff <= 0 OR staff > 500)
 UNION ALL
 SELECT 'dimstore', 'Range', 'rating_out_of_bounds',
-       'storerating not in [2.0, 5.0]',
+       'storerating not in [2.0, 5.0] (excluding dummy)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimstore WHERE storerating < 2.0 OR storerating > 5.0;
+FROM dbo.dimstore WHERE storeid > 0 AND (storerating < 2.0 OR storerating > 5.0);
 
 -- ============================================================================
 -- 5. CHECKS FOR dimpromotion
 --    - Primary key and name must be unique.
 --    - discount_pct must be 0.0‑0.45; discount_fixed must be non‑negative.
---    - startdate cannot be after enddate.
---    - Already‑ended promotions should be marked inactive.
+--    - startdate cannot be after enddate (excluding dummies).
+--    - Already‑ended promotions should be marked inactive (excluding dummies).
 --    - redemption_rate must be between 0 and 1.
 -- ============================================================================
 INSERT INTO #dq_checks
@@ -311,16 +313,16 @@ SELECT 'dimpromotion', 'Range', 'discount_fixed_negative',
 FROM dbo.dimpromotion WHERE discount_fixed < 0
 UNION ALL
 SELECT 'dimpromotion', 'Logical', 'startdate_after_enddate',
-       'startdate > enddate',
+       'startdate > enddate (excluding dummies)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimpromotion WHERE startdate > enddate
+FROM dbo.dimpromotion WHERE promoid > 0 AND startdate > enddate
 UNION ALL
 SELECT 'dimpromotion', 'Logical', 'ended_but_active',
-       'enddate < today but still marked isactive=1',
+       'enddate < today but still marked isactive=1 (excluding dummies)',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
        CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END
-FROM dbo.dimpromotion WHERE enddate < CAST(GETDATE() AS DATE) AND isactive = 1
+FROM dbo.dimpromotion WHERE promoid > 0 AND enddate < CAST(GETDATE() AS DATE) AND isactive = 1
 UNION ALL
 SELECT 'dimpromotion', 'Range', 'redemption_rate_outside_0_1',
        'redemption_rate not in [0, 1]',
@@ -329,10 +331,10 @@ SELECT 'dimpromotion', 'Range', 'redemption_rate_outside_0_1',
 FROM dbo.dimpromotion WHERE redemption_rate < 0 OR redemption_rate > 1
 UNION ALL
 SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname',
-       'duplicate promotion name',
-       (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion),
-       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) AS NVARCHAR),
-       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion) = 0 THEN 'PASS' ELSE 'FAIL' END;
+       'duplicate promotion name (excluding dummies)',
+       (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion WHERE promoid > 0),
+       '0', CAST((SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion WHERE promoid > 0) AS NVARCHAR),
+       CASE WHEN (SELECT COUNT(*) - COUNT(DISTINCT promoname) FROM dbo.dimpromotion WHERE promoid > 0) = 0 THEN 'PASS' ELSE 'FAIL' END;
 
 -- ============================================================================
 -- 6. CHECKS FOR factsales
@@ -340,7 +342,7 @@ SELECT 'dimpromotion', 'Uniqueness', 'duplicate_promoname',
 --    - Unit price and tax rate within expected ranges
 --    - Return logic: returns must have negative net/gross;
 --      non‑returns must have 'No return' as reason.
---    - Quantity must be > 0 and ≤ 50 (scaled values may exceed original range)
+--    - Quantity must be > 0 and ≤ 50
 --    - Hour must be 0‑23, never NULL
 --    - deliverydays = 0 exactly for In‑Store channel
 --    - shipping cost zero for In‑Store; positive for online non‑returns
@@ -463,7 +465,7 @@ SELECT 'factsales', 'Logical', 'shipcost_zero_for_online',
 FROM dbo.factsales
 WHERE channel IN ('Online', 'Mobile App') AND shipcost = 0 AND isreturn = 0
 UNION ALL
--- Foreign key validity
+-- Foreign key validity (Relies on Trusted Keys in build script for instant validation)
 SELECT 'factsales', 'FK', 'invalid_datekey',
        'datekey not in dimdate',
        COUNT(*), '0', CAST(COUNT(*) AS NVARCHAR),
