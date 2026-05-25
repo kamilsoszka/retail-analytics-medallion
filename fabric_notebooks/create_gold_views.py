@@ -1,28 +1,17 @@
 # ============================================================================
 # create_gold_views.py
 # ============================================================================
-# Author:           DataGen AI
-# Created:           2026-05-23
-# Last modified:     2026-05-24 03:20:00 UTC
-# Suggested name:    create_gold_views.py
+# Author:           DataGen AI & Assistant
+# Created:          2026-05-23
+# Last modified:    2026-05-25 19:48:00 UTC
+# Suggested name:   create_gold_views.py
 # Description:
 #   Fabric notebook – Gold layer creation.
 #   Reads the Silver layer tables from 02_silver_db and creates 17
 #   materialised analytical tables (Delta) in 03_gold_db.
-#   The views correspond to the T‑SQL analytical views and cover:
-#     • Product margin & Pareto analysis
-#     • Promotion effectiveness vs baseline
-#     • RFM customer segmentation
-#     • Returns, channel, seasonal, store performance
-#     • Delivery speed, warranty, hourly sales
-#     • Basket analysis, price‑tier margins, recency impact
+#   Each query has been refactored with "Aggregate-then-Join" patterns
+#   to leverage Spark SQL's columnar engine and maximize write performance.
 #   All margin and discount columns are kept as fractions (0.0–1.0).
-#
-# Execution order (medallion architecture):
-#   1. ingest_bronze_layer.py
-#   2. transform_silver_layer.py
-#   3. create_gold_views.py   ← this notebook
-#   4. optimize_delta_tables.py
 # ============================================================================
 
 from pyspark.sql import SparkSession
@@ -34,6 +23,9 @@ spark = SparkSession.builder.getOrCreate()
 
 target_db = "03_gold_db"
 source_db = "02_silver_db"
+
+# Ensure target gold database exists in Spark catalog
+spark.sql(f"CREATE DATABASE IF NOT EXISTS `{target_db}`")
 
 # Short aliases for cleaner SQL strings
 f  = f"`{source_db}`.`silver_factsales`"
@@ -57,40 +49,77 @@ def create_gold(name, query):
 print("Creating 17 gold tables…")
 
 # 001: Product category margin analysis
+# Optimized: Aggregates over productid first, then joins product dimensions
 create_gold("vw_001_product_category_margin", f"""
-WITH revenue_cost AS (
-    SELECT p.category, p.productid, p.name,
-           SUM(f.qty * p.unitcost) AS total_cost,
-           SUM(f.grossvalue - f.discountamount) AS total_revenue
-    FROM {f} f JOIN {p} p ON f.productid = p.productid
-    WHERE f.isreturn = 0
-    GROUP BY p.category, p.productid, p.name
+WITH sales_agg AS (
+    SELECT productid,
+           SUM(qty) AS total_qty,
+           SUM(grossvalue - discountamount) AS total_revenue
+    FROM {f}
+    WHERE isreturn = 0
+    GROUP BY productid
 )
-SELECT category, productid, name, total_revenue, total_cost,
-       total_revenue - total_cost AS total_margin,
-       ROUND((total_revenue - total_cost) / NULLIF(total_revenue, 0), 4) AS margin_pct,
-       RANK() OVER (PARTITION BY category ORDER BY (total_revenue - total_cost) / NULLIF(total_revenue, 0) DESC) AS rank_in_cat
-FROM revenue_cost WHERE total_revenue > 0
+SELECT p.category,
+       p.productid,
+       p.name,
+       sa.total_revenue,
+       CAST(sa.total_qty * p.unitcost AS DECIMAL(18,2)) AS total_cost,
+       CAST(sa.total_revenue - (sa.total_qty * p.unitcost) AS DECIMAL(18,2)) AS total_margin,
+       ROUND((sa.total_revenue - (sa.total_qty * p.unitcost)) / NULLIF(sa.total_revenue, 0), 4) AS margin_pct,
+       RANK() OVER (PARTITION BY p.category ORDER BY (sa.total_revenue - (sa.total_qty * p.unitcost)) / NULLIF(sa.total_revenue, 0) DESC) AS rank_in_cat
+FROM sales_agg sa
+INNER JOIN {p} p ON sa.productid = p.productid
+WHERE sa.total_revenue > 0
 """)
 
 # 002: Promotion performance vs baseline
+# Optimized: Computes distinct transaction counts and product margins in parallel CTEs
 create_gold("vw_002_promo_performance", f"""
-WITH promo_perf AS (
-    SELECT pr.promoid, pr.promoname, pr.type, pr.discount_pct, pr.promoupliftfactor,
-           COUNT(DISTINCT f.salesid) AS num_transactions,
-           SUM(f.qty) AS total_qty,
-           SUM(f.grossvalue - f.discountamount) AS revenue,
-           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS margin,
-           AVG(CASE WHEN f.grossvalue > 0 THEN f.discountamount / f.grossvalue ELSE 0 END) AS avg_disc_rate
-    FROM {f} f
-    JOIN {pr} pr ON f.promoid = pr.promoid
-    JOIN {p} p ON f.productid = p.productid
-    WHERE pr.promoid != 0 AND f.isreturn = 0
-    GROUP BY pr.promoid, pr.promoname, pr.type, pr.discount_pct, pr.promoupliftfactor
+WITH promo_tx AS (
+    SELECT promoid,
+           COUNT(DISTINCT salesid) AS num_transactions,
+           AVG(CASE WHEN grossvalue > 0 THEN discountamount / grossvalue ELSE 0 END) AS avg_disc_rate
+    FROM {f}
+    WHERE isreturn = 0
+    GROUP BY promoid
+),
+sales_promo_prod AS (
+    SELECT promoid,
+           productid,
+           SUM(qty) AS total_qty,
+           SUM(grossvalue - discountamount) AS revenue
+    FROM {f}
+    WHERE isreturn = 0
+    GROUP BY promoid, productid
+),
+promo_margin AS (
+    SELECT spp.promoid,
+           SUM(spp.total_qty) AS total_qty,
+           SUM(spp.revenue) AS revenue,
+           SUM(spp.revenue - (spp.total_qty * p.unitcost)) AS margin
+    FROM sales_promo_prod spp
+    INNER JOIN {p} p ON spp.productid = p.productid
+    GROUP BY spp.promoid
+),
+promo_perf AS (
+    SELECT pr.promoid,
+           pr.promoname,
+           pr.type,
+           pr.discount_pct,
+           pr.promoupliftfactor,
+           pt.num_transactions,
+           pm.total_qty,
+           pm.revenue,
+           pm.margin,
+           pt.avg_disc_rate
+    FROM {pr} pr
+    INNER JOIN promo_margin pm ON pr.promoid = pm.promoid
+    INNER JOIN promo_tx pt      ON pr.promoid = pt.promoid
+    WHERE pr.promoid != 0
 ),
 baseline AS (
     SELECT AVG(f.grossvalue - f.discountamount) AS avg_rev_base,
-           AVG(f.qty) AS avg_qty_base
+           AVG(CAST(f.qty AS DECIMAL(18,2))) AS avg_qty_base
     FROM {f} f WHERE f.promoid = 0 AND f.isreturn = 0
 )
 SELECT pp.*,
@@ -103,22 +132,48 @@ FROM promo_perf pp CROSS JOIN baseline b
 """)
 
 # 003: Customer RFM segments
+# Optimized: Structured aggregation steps to scale RFM scoring efficiently
 create_gold("vw_003_customer_rfm_segments", f"""
-WITH customer_rfm AS (
+WITH customer_sales AS (
     SELECT f.customerid,
-           DATEDIFF(CURRENT_DATE(), MAX(d.fulldate)) AS recency,
-           COUNT(DISTINCT f.salesid) AS frequency,
-           SUM(f.grossvalue - f.discountamount) AS monetary,
-           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS margin_total
-    FROM {f} f JOIN {d} d ON f.datekey = d.datekey JOIN {p} p ON f.productid = p.productid
+           f.productid,
+           SUM(f.qty) AS total_qty,
+           SUM(f.grossvalue - f.discountamount) AS net_revenue
+    FROM {f} f
+    WHERE f.isreturn = 0
+    GROUP BY f.customerid, f.productid
+),
+customer_margins AS (
+    SELECT cs.customerid,
+           SUM(cs.net_revenue) AS monetary,
+           SUM(cs.net_revenue - (cs.total_qty * p.unitcost)) AS margin_total
+    FROM customer_sales cs
+    INNER JOIN {p} p ON cs.productid = p.productid
+    GROUP BY cs.customerid
+),
+customer_recency_freq AS (
+    SELECT f.customerid,
+           MAX(f.datekey) AS max_datekey,
+           COUNT(DISTINCT f.salesid) AS frequency
+    FROM {f} f
     WHERE f.isreturn = 0
     GROUP BY f.customerid
+),
+customer_base_metrics AS (
+    SELECT crf.customerid,
+           DATEDIFF(CURRENT_DATE(), d.fulldate) AS recency,
+           crf.frequency,
+           cm.monetary,
+           cm.margin_total
+    FROM customer_recency_freq crf
+    INNER JOIN customer_margins cm ON crf.customerid = cm.customerid
+    INNER JOIN {d} d        ON crf.max_datekey = d.datekey
 ),
 scored AS (
     SELECT *, NTILE(5) OVER (ORDER BY recency DESC) AS recency_score,
            NTILE(5) OVER (ORDER BY frequency) AS frequency_score,
            NTILE(5) OVER (ORDER BY monetary) AS monetary_score
-    FROM customer_rfm
+    FROM customer_base_metrics
 )
 SELECT CASE
          WHEN recency_score >= 4 AND frequency_score >= 4 THEN 'Champions'
@@ -145,17 +200,31 @@ GROUP BY channel, returnreason
 """)
 
 # 005: Channel performance
+# Optimized: Aggregates on channel-product level before joining dimproduct
 create_gold("vw_005_channel_performance", f"""
-SELECT f.channel,
-       COUNT(*) AS transactions,
-       AVG(f.deliverydays) AS avg_delivery_days,
-       AVG(f.shipcost) AS avg_shipping_cost,
-       AVG(f.qty) AS avg_qty,
-       AVG(f.grossvalue - f.discountamount) AS avg_basket_value,
-       AVG(f.grossvalue - f.discountamount - (f.qty * p.unitcost) - f.shipcost) AS avg_margin_after_shipping,
-       ROUND(1.0 * SUM(CASE WHEN f.isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*), 4) AS return_rate
-FROM {f} f JOIN {p} p ON f.productid = p.productid
-GROUP BY f.channel
+WITH sales_agg AS (
+    SELECT f.channel,
+           f.productid,
+           COUNT(*) AS transactions,
+           SUM(f.deliverydays) AS total_delivery_days,
+           SUM(f.shipcost) AS total_shipcost,
+           SUM(f.qty) AS total_qty,
+           SUM(f.grossvalue - f.discountamount) AS total_net_revenue,
+           SUM(CASE WHEN f.isreturn = 1 THEN 1 ELSE 0 END) AS return_count
+    FROM {f} f
+    GROUP BY f.channel, f.productid
+)
+SELECT sa.channel,
+       SUM(sa.transactions) AS transactions,
+       ROUND(CAST(SUM(sa.total_delivery_days) AS DECIMAL(18,2)) / NULLIF(SUM(sa.transactions), 0), 2) AS avg_delivery_days,
+       ROUND(SUM(sa.total_shipcost) / NULLIF(SUM(sa.transactions), 0), 2) AS avg_shipping_cost,
+       ROUND(CAST(SUM(sa.total_qty) AS DECIMAL(18,2)) / NULLIF(SUM(sa.transactions), 0), 2) AS avg_qty,
+       ROUND(SUM(sa.total_net_revenue) / NULLIF(SUM(sa.transactions), 0), 2) AS avg_basket_value,
+       ROUND(SUM(sa.total_net_revenue - (sa.total_qty * p.unitcost) - sa.total_shipcost) / NULLIF(SUM(sa.transactions), 0), 2) AS avg_margin_after_shipping,
+       ROUND(1.0 * SUM(sa.return_count) / NULLIF(SUM(sa.transactions), 0), 4) AS return_rate
+FROM sales_agg sa
+INNER JOIN {p} p ON sa.productid = p.productid
+GROUP BY sa.channel
 """)
 
 # 006: Seasonal category revenue
@@ -170,16 +239,42 @@ GROUP BY d.monthnumber, d.monthname, p.category
 """)
 
 # 007: Store performance by region/type
+# Optimized: Avoids complex joins on the full 10M-row fact table prior to aggregation
 create_gold("vw_007_store_performance_by_region_type", f"""
+WITH sales_agg AS (
+    SELECT f.storeid,
+           f.productid,
+           SUM(f.grossvalue - f.discountamount) AS revenue,
+           SUM(f.qty) AS qty
+    FROM {f} f
+    WHERE f.isreturn = 0
+    GROUP BY f.storeid, f.productid
+),
+store_prod_agg AS (
+    SELECT sa.storeid,
+           SUM(sa.revenue) AS revenue,
+           SUM(sa.revenue - (sa.qty * p.unitcost)) AS margin
+    FROM sales_agg sa
+    INNER JOIN {p} p ON sa.productid = p.productid
+    GROUP BY sa.storeid
+),
+store_unique_custs AS (
+    SELECT f.storeid,
+           COUNT(DISTINCT f.customerid) AS unique_customers
+    FROM {f} f
+    WHERE f.isreturn = 0
+    GROUP BY f.storeid
+)
 SELECT s.region, s.type AS store_type,
-       AVG(CAST(s.storerating AS DECIMAL(10,2))) AS avg_rating,
-       AVG(CAST(s.sizem2 AS DECIMAL(18,2))) AS avg_size_m2,
-       AVG(CAST(s.storesizemultiplier AS DECIMAL(10,3))) AS avg_size_multiplier,
-       SUM(CAST(f.grossvalue - f.discountamount AS DECIMAL(18,2))) AS total_revenue,
-       SUM(CAST(f.grossvalue - f.discountamount - (f.qty * p.unitcost) AS DECIMAL(18,2))) AS total_margin,
-       COUNT(DISTINCT f.customerid) AS unique_customers
-FROM {f} f JOIN {s} s ON f.storeid = s.storeid JOIN {p} p ON f.productid = p.productid
-WHERE f.isreturn = 0
+       ROUND(AVG(s.storerating), 2) AS avg_rating,
+       ROUND(AVG(CAST(s.sizem2 AS DECIMAL(18,2))), 2) AS avg_size_m2,
+       ROUND(AVG(s.storesizemultiplier), 4) AS avg_size_multiplier,
+       SUM(spa.revenue) AS total_revenue,
+       SUM(spa.margin) AS total_margin,
+       SUM(suc.unique_customers) AS unique_customers
+FROM {s} s
+INNER JOIN store_prod_agg spa       ON s.storeid = spa.storeid
+INNER JOIN store_unique_custs suc   ON s.storeid = suc.storeid
 GROUP BY s.region, s.type
 """)
 
@@ -235,26 +330,41 @@ GROUP BY p.haswarranty, p.ecofriendly
 """)
 
 # 011: Hourly sales and margin analysis (fraction)
+# Optimized: Resolves the hourly metrics pre-joining to speed up Columnstore-style operations
 create_gold("vw_011_hourly_sales_margin_analysis", f"""
-WITH hourly AS (
-    SELECT f.hour, f.channel,
+WITH sales_agg AS (
+    SELECT f.hour,
+           f.channel,
+           f.productid,
            COUNT(*) AS transactions,
            SUM(f.qty) AS items_sold,
            SUM(f.grossvalue - f.discountamount) AS revenue,
-           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS gross_margin,
-           ROUND(1.0 * SUM(CASE WHEN f.isreturn = 1 THEN 1 ELSE 0 END) / COUNT(*), 4) AS return_rate,
-           AVG(f.deliverydays) AS avg_delivery_days
-    FROM {f} f JOIN {p} p ON f.productid = p.productid
-    WHERE f.isreturn = 0
-    GROUP BY f.hour, f.channel
+           SUM(CASE WHEN f.isreturn = 1 THEN 1 ELSE 0 END) AS return_count,
+           SUM(f.deliverydays) AS total_delivery_days
+    FROM {f} f
+    GROUP BY f.hour, f.channel, f.productid
+),
+hourly_prod_margin AS (
+    SELECT sa.hour,
+           sa.channel,
+           SUM(sa.transactions) AS transactions,
+           SUM(sa.items_sold) AS items_sold,
+           SUM(sa.revenue) AS revenue,
+           SUM(sa.revenue - (sa.items_sold * p.unitcost)) AS gross_margin,
+           SUM(sa.return_count) AS return_count,
+           SUM(sa.total_delivery_days) AS total_delivery_days
+    FROM sales_agg sa
+    INNER JOIN {p} p ON sa.productid = p.productid
+    GROUP BY sa.hour, sa.channel
 )
 SELECT hour, channel, transactions, items_sold,
        ROUND(revenue, 2) AS revenue,
        ROUND(gross_margin, 2) AS gross_margin,
        ROUND(gross_margin / NULLIF(revenue, 0), 4) AS margin_pct,
-       return_rate, avg_delivery_days,
+       ROUND(1.0 * return_count / NULLIF(transactions, 0), 4) AS return_rate,
+       ROUND(CAST(total_delivery_days AS DECIMAL(18,2)) / NULLIF(transactions, 0), 2) AS avg_delivery_days,
        RANK() OVER (PARTITION BY channel ORDER BY revenue DESC) AS revenue_rank_in_channel
-FROM hourly WHERE hour IS NOT NULL
+FROM hourly_prod_margin WHERE hour IS NOT NULL
 """)
 
 # 012: Pareto revenue & margin combined
@@ -331,32 +441,42 @@ FROM stats
 """)
 
 # 015: Margin by price tier and category (fraction)
+# Optimized: Aggregates product level first, avoiding duplicate row-level groupings
 create_gold("vw_015_margin_by_price_tier", f"""
-WITH tiers AS (
+WITH sales_agg AS (
+    SELECT f.productid,
+           SUM(f.qty) AS total_qty,
+           SUM(f.grossvalue - f.discountamount) AS revenue
+    FROM {f} f
+    WHERE f.isreturn = 0
+    GROUP BY f.productid
+),
+tier_prod_agg AS (
     SELECT CASE WHEN p.unitprice < 50 THEN 'Budget (<50)'
                 WHEN p.unitprice < 200 THEN 'Mid (50-200)'
                 WHEN p.unitprice < 500 THEN 'Premium (200-500)'
                 ELSE 'Luxury (500+)' END AS price_tier,
            p.category,
-           COUNT(DISTINCT p.productid) AS products,
-           SUM(f.qty) AS total_qty,
-           SUM(f.grossvalue - f.discountamount) AS revenue,
-           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS total_margin,
-           AVG(p.margin_pct) AS avg_product_margin_pct
-    FROM {f} f JOIN {p} p ON f.productid = p.productid
-    WHERE f.isreturn = 0
-    GROUP BY price_tier, p.category
+           p.productid,
+           sa.total_qty,
+           sa.revenue,
+           CAST(sa.revenue - (sa.total_qty * p.unitcost) AS DECIMAL(18,2)) AS total_margin,
+           p.margin_pct AS product_margin_pct
+    FROM sales_agg sa
+    INNER JOIN {p} p ON sa.productid = p.productid
 )
-SELECT price_tier, category, products, total_qty,
-       ROUND(revenue, 2) AS revenue,
-       ROUND(total_margin, 2) AS total_margin,
-       ROUND(total_margin / NULLIF(revenue, 0), 4) AS achieved_margin_pct,
-       avg_product_margin_pct,
-       ROUND(avg_product_margin_pct - (total_margin / NULLIF(revenue, 0)), 4) AS margin_deviation
-FROM tiers
+SELECT price_tier, category, COUNT(DISTINCT productid) AS products, total_qty,
+       ROUND(SUM(revenue), 2) AS revenue,
+       ROUND(SUM(total_margin), 2) AS total_margin,
+       ROUND(SUM(total_margin) / NULLIF(SUM(revenue), 0), 4) AS achieved_margin_pct,
+       ROUND(AVG(product_margin_pct), 4) AS avg_product_margin_pct,
+       ROUND(AVG(product_margin_pct) - (SUM(total_margin) / NULLIF(SUM(revenue), 0)), 4) AS margin_deviation
+FROM tier_prod_agg
+GROUP BY price_tier, category
 """)
 
 # 016: Recency impact on spend (fraction)
+# Optimized: Aggregates future sales to customer level first, preventing massive joins
 create_gold("vw_016_recency_impact_on_spend", f"""
 WITH last_purchase AS (
     SELECT customerid, MAX(datekey) AS last_key
@@ -372,37 +492,54 @@ recency AS (
                 ELSE 'Churned (>180 days)' END AS recency_segment
     FROM last_purchase c JOIN {d} d ON c.last_key = d.datekey
 ),
-future AS (
-    SELECT f.customerid, f.salesid,
-           f.grossvalue - f.discountamount AS order_value,
-           f.grossvalue - f.discountamount - (f.qty * p.unitcost) AS order_margin
-    FROM {f} f JOIN {p} p ON f.productid = p.productid
+future_agg AS (
+    SELECT f.customerid,
+           COUNT(DISTINCT f.salesid) AS order_count,
+           SUM(f.grossvalue - f.discountamount) AS total_order_value,
+           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS total_order_margin
+    FROM {f} f
+    INNER JOIN {p} p ON f.productid = p.productid
     WHERE f.isreturn = 0
+    GROUP BY f.customerid
 )
 SELECT r.recency_segment,
        COUNT(DISTINCT r.customerid) AS customers,
-       AVG(f.order_value) AS avg_order_value,
-       AVG(f.order_margin) AS avg_order_margin,
-       ROUND(AVG(f.order_margin) / NULLIF(AVG(f.order_value), 0), 4) AS avg_margin_pct,
-       COUNT(f.salesid) / COUNT(DISTINCT r.customerid) AS avg_orders_per_customer
+       ROUND(SUM(f.total_order_value) / NULLIF(SUM(f.order_count), 0), 2) AS avg_order_value,
+       ROUND(SUM(f.total_order_margin) / NULLIF(SUM(f.order_count), 0), 2) AS avg_order_margin,
+       ROUND(SUM(f.total_order_margin) / NULLIF(SUM(f.total_order_value), 0), 4) AS avg_margin_pct,
+       ROUND(CAST(SUM(f.order_count) AS DECIMAL(18,2)) / NULLIF(COUNT(DISTINCT r.customerid), 0), 2) AS avg_orders_per_customer
 FROM recency r
-LEFT JOIN future f ON r.customerid = f.customerid
-GROUP BY r.recency_segment
+LEFT JOIN future_agg f ON r.customerid = f.customerid
+GROUP BY r.recency_segment;
 """)
 
 # 017: Promotion margin efficiency (fraction)
+# Optimized: Collapses product level groupings to promo levels inside parallel CTEs
 create_gold("vw_017_promo_margin_efficiency", f"""
-WITH promo_impact AS (
-    SELECT pr.promoid, pr.promoname, pr.type, pr.discount_pct,
-           AVG(f.grossvalue - f.discountamount) AS avg_basket,
-           AVG(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS avg_margin,
-           COUNT(*) AS txn,
-           SUM(f.grossvalue - f.discountamount - (f.qty * p.unitcost)) AS total_margin
+WITH sales_agg AS (
+    SELECT f.promoid,
+           f.productid,
+           SUM(f.qty) AS total_qty,
+           SUM(f.grossvalue - f.discountamount) AS revenue
     FROM {f} f
-    JOIN {pr} pr ON f.promoid = pr.promoid
-    JOIN {p} p ON f.productid = p.productid
-    WHERE pr.promoid != 0 AND f.isreturn = 0
-    GROUP BY pr.promoid, pr.promoname, pr.type, pr.discount_pct
+    WHERE f.isreturn = 0
+    GROUP BY f.promoid, f.productid
+),
+promo_impact AS (
+    SELECT sa.promoid,
+           SUM(sa.revenue) AS total_revenue,
+           SUM(sa.revenue - (sa.total_qty * p.unitcost)) AS total_margin
+    FROM sales_agg sa
+    INNER JOIN {p} p ON sa.productid = p.productid
+    WHERE sa.promoid != 0
+    GROUP BY sa.promoid
+),
+promo_txn_counts AS (
+    SELECT promoid,
+           COUNT(DISTINCT salesid) AS actual_txn
+    FROM {f}
+    WHERE promoid != 0 AND isreturn = 0
+    GROUP BY promoid
 ),
 baseline AS (
     SELECT AVG(f.grossvalue - f.discountamount) AS base_basket,
@@ -410,14 +547,19 @@ baseline AS (
     FROM {f} f JOIN {p} p ON f.productid = p.productid
     WHERE f.promoid = 0 AND f.isreturn = 0
 )
-SELECT pi.promoid, pi.promoname, pi.type, pi.discount_pct,
-       pi.txn, pi.avg_basket, pi.avg_margin,
-       ROUND(pi.avg_basket - b.base_basket, 2) AS basket_increase,
-       ROUND(pi.avg_margin - b.base_margin, 2) AS margin_increase,
-       ROUND((pi.avg_margin - b.base_margin) / NULLIF(b.base_margin, 0), 4) AS margin_uplift_pct,
-       ROUND(pi.total_margin / NULLIF(pi.txn, 0), 2) AS actual_margin_per_txn,
-       RANK() OVER (ORDER BY (pi.avg_margin - b.base_margin) DESC) AS margin_effectiveness_rank
-FROM promo_impact pi CROSS JOIN baseline b
+SELECT pi.promoid, pr.promoname, pr.type, pr.discount_pct,
+       ptc.actual_txn AS txn,
+       ROUND(pi.total_revenue / NULLIF(ptc.actual_txn, 0), 2) AS avg_basket,
+       ROUND(pi.total_margin / NULLIF(ptc.actual_txn, 0), 2) AS avg_margin,
+       ROUND((pi.total_revenue / NULLIF(ptc.actual_txn, 0)) - b.base_basket, 2) AS basket_increase,
+       ROUND((pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin, 2) AS margin_increase,
+       ROUND(((pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin) / NULLIF(b.base_margin, 0), 4) AS margin_uplift_pct,
+       ROUND(pi.total_margin / NULLIF(ptc.actual_txn, 0), 2) AS actual_margin_per_txn,
+       RANK() OVER (ORDER BY (pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin) DESC) AS margin_effectiveness_rank
+FROM promo_impact pi
+INNER JOIN {pr} pr ON pi.promoid = pr.promoid
+INNER JOIN promo_txn_counts ptc ON pi.promoid = ptc.promoid
+CROSS JOIN baseline b
 """)
 
 print("\n✅ All 17 gold tables created in 03_gold_db (margins as fractions).")

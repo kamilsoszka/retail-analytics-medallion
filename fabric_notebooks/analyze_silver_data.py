@@ -1,22 +1,16 @@
 # ============================================================================
 # analyze_silver_data.py
 # ============================================================================
-# Author:           DataGen AI
-# Created:           2026-05-23
-# Last modified:     2026-05-24 04:00:00 UTC
-# Suggested name:    analyze_silver_data.py
+# Author:           DataGen AI & Assistant
+# Created:          2026-05-23
+# Last modified:    2026-05-25 19:57:00 UTC
+# Suggested name:   analyze_silver_data.py
 # Description:
 #   Fabric notebook – analytical queries on Silver layer data.
-#   Loads tables from 02_silver_db and computes key business metrics:
-#     • Total revenue, COGS, gross profit & margin
-#     • Average basket value, return rate, discount penetration
-#     • Revenue by category, region, store, product
-#     • Monthly revenue trend, delivery days, return rate by category
-#     • New vs returning customer basket, weekend/weekday revenue
-#   All monetary values are formatted with thousand separators and zero
-#   decimal places.  Percentages are displayed with two decimal places
-#   (e.g. 12.34%).
-#   Results are printed directly to the notebook output.
+#   Loads tables from 02_silver_db and computes key business metrics.
+#   Optimized to consolidate multiple expensive Spark actions (like head()
+#   and countDistinct) on 10M rows into single-pass aggregations.
+#   Implements conditional aggregation for new vs returning metrics.
 # ============================================================================
 
 import pandas as pd
@@ -71,50 +65,55 @@ def spark_df_to_pandas(df, money_cols=None, pct_cols=None, limit=None):
                 pdf[c] = pdf[c].apply(lambda x: f"{x*100:.2f}%" if pd.notnull(x) else "")
     return pdf
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # 3. Core financial KPIs (scalar values)
-# ---------------------------------------------------------------------------
+#    Optimized: Consolidates multiple costly Spark actions into one pass
+# ============================================================================
 print("=" * 60)
 print("FINANCIAL KEY PERFORMANCE INDICATORS")
 print("=" * 60)
 
-# 3.1 Total revenue (excluding returns)
-total_rev = to_float(
-    fact.filter(col("isreturn") == 0)
-        .select(spark_sum("net"))
-        .head()[0]
-)
-print(f"Total revenue (excl. returns): {fmt_money(total_rev)}")
+nonret = fact.filter(col("isreturn") == 0)
 
-# 3.2 Total COGS
+# Job 1 (Non-Return Table Metrics): Evaluates Sum, Distinct Count, and Avg in one pass
+print("Evaluating non-return financial metrics...")
+nonret_metrics = nonret.select(
+    spark_sum("net").alias("total_rev"),
+    countDistinct("salesid").alias("num_baskets"),
+    avg("discountapplied").alias("disc_pen")
+).collect()[0]
+
+total_rev   = to_float(nonret_metrics["total_rev"])
+num_baskets = to_float(nonret_metrics["num_baskets"])
+disc_pen    = to_float(nonret_metrics["disc_pen"])
+
+# Job 2 (Full Table Metrics): Simple average on returns
+print("Evaluating return rate metrics...")
+full_metrics = fact.select(
+    avg("isreturn").alias("ret_rate")
+).collect()[0]
+
+ret_rate = to_float(full_metrics["ret_rate"])
+
+# Job 3 (COGS Calculation): Requires dimension join
+print("Evaluating COGS metrics...")
 merged = fact.join(prod, "productid").filter(col("isreturn") == 0)
 total_cogs = to_float(
     merged.select(spark_sum(col("qty") * col("unitcost"))).head()[0]
 )
-print(f"Total COGS:                    {fmt_money(total_cogs)}")
 
-# 3.3 Gross profit
+# Outputting aggregated metrics
 gross_profit = total_rev - total_cogs
-print(f"Gross profit:                  {fmt_money(gross_profit)}")
-
-# 3.4 Gross margin percentage
 gross_margin_pct = (gross_profit / total_rev * 100) if total_rev else 0
-print(f"Gross margin %:                {gross_margin_pct:.2f}%")
-
-# 3.5 Average basket value
-nonret = fact.filter(col("isreturn") == 0)
-num_baskets = to_float(nonret.select(countDistinct("salesid")).head()[0])
 avg_basket = total_rev / num_baskets if num_baskets else 0
+
+print("-" * 60)
+print(f"Total revenue (excl. returns): {fmt_money(total_rev)}")
+print(f"Total COGS:                    {fmt_money(total_cogs)}")
+print(f"Gross profit:                  {fmt_money(gross_profit)}")
+print(f"Gross margin %:                {gross_margin_pct:.2f}%")
 print(f"Average basket value:          {fmt_money(avg_basket)}")
-
-# 3.6 Return rate
-ret_rate = to_float(fact.select(avg("isreturn")).head()[0])
 print(f"Return rate:                   {fmt_pct(ret_rate)}")
-
-# 3.7 Discount penetration
-disc_pen = to_float(
-    nonret.select(avg("discountapplied")).head()[0]
-)
 print(f"Discount penetration:          {fmt_pct(disc_pen)}")
 
 # ---------------------------------------------------------------------------
@@ -248,17 +247,21 @@ ret_cat.index = ret_cat.index + 1
 print(ret_cat.to_string())
 
 # 6.4 New vs returning customer average basket
+# Optimized: Evaluates averages for both cohorts in a single conditional aggregation pass
+print("Evaluating new vs returning customer cohorts...")
 first_purchase = fact.groupBy("customerid").agg(min("datekey").alias("first_key"))
 merged_first = fact.join(first_purchase, "customerid") \
     .withColumn("is_new", when(col("datekey") == col("first_key"), 1).otherwise(0))
 nonret_first = merged_first.filter(col("isreturn") == 0)
 
-avg_new_basket = to_float(
-    nonret_first.filter(col("is_new") == 1).select(avg("net")).head()[0]
-)
-avg_ret_basket = to_float(
-    nonret_first.filter(col("is_new") == 0).select(avg("net")).head()[0]
-)
+first_metrics = nonret_first.select(
+    avg(when(col("is_new") == 1, col("net"))).alias("avg_new"),
+    avg(when(col("is_new") == 0, col("net"))).alias("avg_ret")
+).collect()[0]
+
+avg_new_basket = to_float(first_metrics["avg_new"])
+avg_ret_basket = to_float(first_metrics["avg_ret"])
+
 print(f"\nNew customers avg basket:      {fmt_money(avg_new_basket)}")
 print(f"Returning customers avg basket: {fmt_money(avg_ret_basket)}")
 

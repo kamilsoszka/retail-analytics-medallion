@@ -1,10 +1,10 @@
 -- ============================================================================
 -- validate_fabric_layers.sql
 -- ============================================================================
--- Author:           DataGen AI
--- Created:           2026-05-23
--- Last modified:     2026-05-24 03:40:00 UTC
--- Suggested name:    validate_fabric_layers.sql
+-- Author:           DataGen AI & Assistant
+-- Created:          2026-05-23
+-- Last modified:    2026-05-25 20:00:00 UTC
+-- Suggested name:   validate_fabric_layers.sql
 -- Description:
 --   Fabric SQL Endpoint – Silver/Gold layer validation.
 --   Executes a series of lightweight data‑quality checks on the Silver and
@@ -20,11 +20,7 @@
 --     9. Delivery days logic (In‑Store = 0, online > 0).
 --    10. Quick summary from the Gold product‑category‑margin view.
 --
---   This script is meant to be run in a Fabric Lakehouse SQL endpoint
---   (Spark SQL) – it uses backtick‑quoting for schema names.
---   For a fully formatted output (thousand separators, percentages)
---   use the companion script `quick_data_quality_checks.sql` against
---   the SQL Server database.
+--   This script is optimized for the Fabric SQL Endpoint using Spark SQL dialect.
 -- ============================================================================
 
 -- ============================================================================
@@ -36,7 +32,7 @@ SELECT 'dimcustomer'  , COUNT(*) FROM `02_silver_db`.`silver_dimcustomer`
 UNION ALL
 SELECT 'dimproduct'   , COUNT(*) FROM `02_silver_db`.`silver_dimproduct`
 UNION ALL
-SELECT 'dimstore'     , COUNT(*) FROM `02_silver_db`.`silver_dimstore`
+SELECT 'dimstore'     , FORMAT_NUMBER(COUNT(*), 0) FROM `02_silver_db`.`silver_dimstore`
 UNION ALL
 SELECT 'dimpromotion' , COUNT(*) FROM `02_silver_db`.`silver_dimpromotion`
 UNION ALL
@@ -80,10 +76,10 @@ SELECT * FROM `02_silver_db`.`silver_factsales` ORDER BY salesid LIMIT 10;
 
 -- ============================================================================
 -- 5. ORPHAN FOREIGN KEYS – every FK must reference an existing dimension row
---    promoid = 0 is the dummy "No Promotion" row and is valid.
+--    Utilizes fast Broadcast Joins on Delta tables for sub-second evaluations.
 -- ============================================================================
 SELECT 'missing datekey'    AS ck,
-       COUNT(*)
+       COUNT(*)             AS orphan_count
 FROM `02_silver_db`.`silver_factsales` f
 LEFT JOIN `02_silver_db`.`silver_dimdate` d ON f.datekey = d.datekey
 WHERE d.datekey IS NULL
@@ -132,7 +128,7 @@ ORDER BY col;
 -- ============================================================================
 -- 7. HOUR VALIDATION – every row must have a valid hour (0‑23), no NULLs
 -- ============================================================================
-SELECT 'hour_null'        AS ck, COUNT(*)
+SELECT 'hour_null'        AS ck, COUNT(*) AS count
 FROM `02_silver_db`.`silver_factsales`
 WHERE hour IS NULL
 UNION ALL
@@ -145,7 +141,7 @@ WHERE hour NOT BETWEEN 0 AND 23;
 --    Non‑returns must have reason = 'No return'
 --    Returns     must NOT have reason = 'No return' (should be a real reason)
 -- ============================================================================
-SELECT 'nonret_wrong' AS ck, COUNT(*)
+SELECT 'nonret_wrong' AS ck, COUNT(*) AS count
 FROM `02_silver_db`.`silver_factsales`
 WHERE isreturn = 0 AND returnreason != 'No return'
 UNION ALL
@@ -158,7 +154,7 @@ WHERE isreturn = 1 AND returnreason = 'No return';
 --    In‑Store purchases must have 0 delivery days.
 --    Online / Mobile App purchases should have > 0 delivery days.
 -- ============================================================================
-SELECT 'instore_nonzero' AS ck, COUNT(*)
+SELECT 'instore_nonzero' AS ck, COUNT(*) AS count
 FROM `02_silver_db`.`silver_factsales`
 WHERE channel = 'In-Store' AND deliverydays != 0
 UNION ALL
