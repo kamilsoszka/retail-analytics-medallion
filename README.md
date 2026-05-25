@@ -1,10 +1,9 @@
----
-
+```markdown
 # 🚀 Retail Analytics – End-to-End Data Pipeline
 
 **Author:** DataGen AI & Assistant  
 **Date:** 2026-05-25  
-**Description:** A production-grade, highly optimized, end-to-end data pipeline for retail transaction analytics built on a scale of **10 million sales rows**. Demonstrates a robust ELT staging-to-production pattern in Microsoft SQL Server and a full Medallion architecture (Bronze 🥉 → Silver 🥈 → Gold 🥇) in Microsoft Fabric Lakehouse. All percentage columns are stored as decimal fractions, monetary values use thousand separators with zero decimals, and validation scripts enforce rigorous business and structural constraints.
+**Description:** A highly optimized, production-grade, reproducible data pipeline for retail transaction analytics built on **10 million sales rows**. Features an ELT staging-to-production pattern in Microsoft SQL Server and a full Medallion architecture (Bronze 🥉 → Silver 🥈 → Gold 🥇) in Microsoft Fabric Lakehouse. All percentage columns are stored as decimal fractions, monetary values use thousand separators with zero decimals, and validation scripts enforce rigorous business and structural constraints.
 
 ---
 
