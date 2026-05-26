@@ -70,8 +70,8 @@ create_gold_views.py     ──►  03_gold_db   (🥇 Gold Layer)
 
 To ensure enterprise-grade performance and business adoption, the final semantic model was optimized and integrated for self-service reporting:
 
-- **VertiPaq Engine Optimization:** Using **DAX Studio** and **VertiPaq Analyzer**, column cardinalities, relationships, and dictionary sizes were audited. Highly-precise datatypes (such as fractions for `_pct` columns and targeted decimals) were enforced in the silver/gold layers to achieve maximum columnar compression in memory.
-- **Analyze in Excel Integration:** Designed and secured the semantic model to support native AD-Hoc reporting. Business and finance stakeholders can connect directly to the centralized, single-source-of-truth Fabric model using Excel Pivot Tables, preventing local file fragmentation and data security breaches.
+- **VertiPaq Engine Optimization:** Using **DAX Studio** and **VertiPaq Analyzer**, column cardinalities, relationships, and dictionary sizes were audited. Highly-precise datatypes (such as fractions for `_pct` columns and targeted decimals) were enforced in the silver/gold layers to achieve maximum columnar compression in memory. The compiled database metrics are stored in `power_bi/Gold_ProductProfitability_Model_VertiPaq.xlsx` [5].
+- **Analyze in Excel Integration:** Designed and secured the semantic model to support native AD-Hoc reporting. Business and finance stakeholders can connect directly to the centralized, single-source-of-truth Fabric model using Excel Pivot Tables, preventing local file fragmentation and data security breaches. The connection template is provided in `power_bi/Gold_ProductProfitability_Model_Analyze.xlsx` [5].
 - **Row-Level Security (RLS) Specification:** Enforces strict geographic data boundaries by implementing regional security roles. Slicing the `region` column on `dim_store` automatically propagates and secures the `fact_sales` table.
   - Role `Regional_Manager_North` filters `dimstore[region] = "North"`
   - Role `Regional_Manager_South` filters `dimstore[region] = "South"`
@@ -97,26 +97,38 @@ To ensure enterprise-grade performance and business adoption, the final semantic
 ## 🛠️ Scripts & Notebooks Reference
 
 ### 🐍 Python Core & Local Orchestration
-*   **`run_pipeline.py`**: **End-to-End local pipeline orchestrator.** Automatically runs the python generation subprocess, connects to SQL, handles `GO` batching, runs DB load, views, and outputs DQ and schema verification tables to console [run_pipeline.py]. Supports parameterized separate folder paths [run_pipeline.py].
-*   **`generate_retail_data.py`**: Generates all CSV files using optimized vectorization. Embeds `-1` and `0` relational dummy rows directly in the CSV outputs [generate_retail_data.py]. Formats floats to safe decimal strings to prevent `BULK INSERT` casting errors [generate_retail_data.py].
-*   **`analyze_csv_data.py`**: Standalone analytical script that reads CSV files [analyze_csv_data.py]. Optimized to select only required columns during merges to reduce memory consumption by >70% on 10M rows [analyze_csv_data.py].
+| Script | Description |
+|--------|-------------|
+| `run_pipeline.py` | **End-to-End local pipeline orchestrator.** Automatically runs the python generation subprocess, connects to SQL, handles `GO` batching, runs DB load, views, and outputs DQ and schema verification tables to console [run_pipeline.py]. Supports parameterized separate folder paths [run_pipeline.py]. |
+| `generate_retail_data.py` | Generates all CSV files using optimized vectorization. Embeds `-1` and `0` relational dummy rows directly in the CSV outputs [generate_retail_data.py]. Formats floats to safe decimal strings to prevent `BULK INSERT` casting errors [generate_retail_data.py]. |
+| `analyze_csv_data.py` | Standalone analytical script that reads CSV files [analyze_csv_data.py]. Optimized to select only required columns during merges to reduce memory consumption by >70% on 10M rows [analyze_csv_data.py]. |
 
 ### 🛢️ T-SQL Database Scripts (Local SQL Server / SSMS)
-*   **`build_retailanalytics_database.sql`**: **ELT DB Builder.** Creates `staging` and `dbo` schemas. Uses fast `BULK INSERT` into staging, inserts into production, and builds Primary Keys, Foreign Keys, and a Clustered Columnstore Index (CCI) *last* for maximum speed [build_retailanalytics_database.sql].
-*   **`create_analytical_views.sql`**: Creates 17 analytical views in `dbo` [create_analytical_views.sql]. Engineered using "Aggregate-then-Join" CTEs to let the CCI aggregate integer keys before joining text columns [create_analytical_views.sql].
-*   **`validate_retail_data_quality.sql`**: Robust DB validation. Formulates 60+ business rules checks (financial, shipping, dates) [validate_retail_data_quality.sql]. Properly ignores technical dummy rows (`-1`/`0`) in range checks to prevent false negatives [validate_retail_data_quality.sql].
-*   **`analyze_product_margins.sql`**: Analyzes stored vs calculated margins [analyze_product_margins.sql]. Draws a visual histogram using `█` in pure T-SQL [analyze_product_margins.sql]. Ignores dummy records in statistical calculations [analyze_product_margins.sql].
-*   **`validate_star_schema_model.sql`**: Validates structural integrity. Confirms CCI presence, allowed columns, PKs, FKs, database `SIMPLE` recovery mode, and verifies that all constraints are fully trusted by the optimizer [validate_star_schema_model.sql].
-*   **`quick_data_quality_checks.sql`**: Quick sanity checks executing row counts, primary key duplicate counts, and financial totals [quick_data_quality_checks.sql].
-*   **`comprehensive_tsql_queries.sql`**: Ready-to-run analytical SQL queries returning COGS, RFM metrics, and trends [comprehensive_tsql_queries.sql]. Uses pre-calculated calendar attributes instead of slow in-flight string conversions [comprehensive_tsql_queries.sql].
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `build_retailanalytics_database.sql` | **ELT DB Builder.** Creates `staging` and `dbo` schemas. Uses fast `BULK INSERT` into staging, inserts into production, and builds Primary Keys, Foreign Keys, and a Clustered Columnstore Index (CCI) *last* for maximum speed [build_retailanalytics_database.sql]. |
+| 2 | `create_analytical_views.sql` | Creates 17 analytical views in `dbo` [create_analytical_views.sql]. Engineered using "Aggregate-then-Join" CTEs to let the CCI aggregate integer keys before joining text columns [create_analytical_views.sql]. |
+| 3 | `validate_retail_data_quality.sql` | Robust DB validation. Formulates 60+ business rules checks (financial, shipping, dates) [validate_retail_data_quality.sql]. Properly ignores technical dummy rows (`-1`/`0`) in range checks to prevent false negatives [validate_retail_data_quality.sql]. |
+| 4 | `analyze_product_margins.sql` | Analyzes stored vs calculated margins [analyze_product_margins.sql]. Draws a visual histogram using `█` in pure T-SQL [analyze_product_margins.sql]. Ignores dummy records in statistical calculations [analyze_product_margins.sql]. |
+| 5 | `validate_star_schema_model.sql` | Validates structural integrity. Confirms CCI presence, allowed columns, PKs, FKs, database `SIMPLE` recovery mode, and verifies that all constraints are fully trusted by the optimizer [validate_star_schema_model.sql]. |
+| 6 | `quick_data_quality_checks.sql` | Quick sanity checks executing row counts, primary key duplicate counts, and financial totals [quick_data_quality_checks.sql]. |
+| 7 | `comprehensive_tsql_queries.sql` | Ready-to-run analytical SQL queries returning COGS, RFM metrics, and trends [comprehensive_tsql_queries.sql]. Uses pre-calculated calendar attributes instead of slow in-flight string conversions [comprehensive_tsql_queries.sql]. |
 
 ### ☁️ Microsoft Fabric Notebooks (Cloud Medallion Pipeline)
-*   **`ingest_bronze_layer.py`**: **Bronze layer Notebook.** Ingests raw CSVs using strict `StructType` schemas (speeds up loading by bypassing `inferSchema`) [ingest_bronze_layer.py]. Writes Delta tables with file lineage metadata [ingest_bronze_layer.py]. Combines fact table partitions to prevent the "Tiny Files" problem on OneLake [ingest_bronze_layer.py].
-*   **`transform_silver_layer.py`**: **Silver layer Notebook.** Sanitizes strings, casts double types to strict `DECIMAL(18,2)` and `DECIMAL(5,4)` scales [transform_silver_layer.py]. Minimizes execution graph by evaluating all columns in a *single projection pass* [transform_silver_layer.py]. Performs quick primary-key-based duplicate removal [transform_silver_layer.py].
-*   **`create_gold_views.py`**: **Gold layer Notebook.** Materializes the 17 analytical views as physical Delta tables [create_gold_views.py]. Implements Spark SQL versions of "Aggregate-then-Join" CTEs to bypass heavy network shuffles on 10M rows [create_gold_views.py].
-*   **`optimize_delta_tables.py`**: **Maintenance Notebook.** Combines compaction and multi-dimensional `Z-ORDER` into a single-pass write to save 50% CPU/IO [optimize_delta_tables.py]. Restructured Z-order keys on factsales to 3 primary keys (`datekey`, `productid`, `customerid`) to avoid the curse of dimensionality [optimize_delta_tables.py].
-*   **`validate_fabric_layers.sql`**: **Fabric SQL Endpoint script.** Executes structural and data quality validation queries. Uses Spark SQL backtick schema notations [validate_fabric_layers.sql].
-*   **`analyze_silver_data.py`**: **Silver analysis Notebook.** Evaluates KPIs [analyze_silver_data.py]. Minimizes separate Spark Actions (`.head()`) by consolidating scalar KPIs into a single Spark job, and groups new/returning cohorts using single-pass conditional aggregation [analyze_silver_data.py].
+| # | Script | Description |
+|---|--------|-------------|
+| 1 | `ingest_bronze_layer.py` | **Bronze layer Notebook.** Ingests raw CSVs using strict `StructType` schemas (speeds up loading by bypassing `inferSchema`) [ingest_bronze_layer.py]. Writes Delta tables with file lineage metadata [ingest_bronze_layer.py]. Combines fact table partitions to prevent the "Tiny Files" problem on OneLake [ingest_bronze_layer.py]. |
+| 2 | `transform_silver_layer.py` | **Silver layer Notebook.** Sanitizes strings, casts double types to strict `DECIMAL(18,2)` and `DECIMAL(5,4)` scales [transform_silver_layer.py]. Minimizes execution graph by evaluating all columns in a *single projection pass* [transform_silver_layer.py]. Performs quick primary-key-based duplicate removal [transform_silver_layer.py]. |
+| 3 | `create_gold_views.py` | **Gold layer Notebook.** Materializes the 17 analytical views as physical Delta tables [create_gold_views.py]. Implements Spark SQL versions of "Aggregate-then-Join" CTEs to bypass heavy network shuffles on 10M rows [create_gold_views.py]. |
+| 4 | `optimize_delta_tables.py` | **Maintenance Notebook.** Combines compaction and multi-dimensional `Z-ORDER` into a single-pass write to save 50% CPU/IO [optimize_delta_tables.py]. Restructured Z-order keys on factsales to 3 primary keys (`datekey`, `productid`, `customerid`) to avoid the curse of dimensionality [optimize_delta_tables.py]. |
+| 5 | `validate_fabric_layers.sql` | **Fabric SQL Endpoint script.** Executes structural and data quality validation queries. Uses Spark SQL backtick schema notations [validate_fabric_layers.sql]. |
+| 6 | `analyze_silver_data.py` | **Silver analysis Notebook.** Evaluates KPIs [analyze_silver_data.py]. Minimizes separate Spark Actions (`.head()`) by consolidating scalar KPIs into a single Spark job, and groups new/returning cohorts using single-pass conditional aggregation [analyze_silver_data.py]. |
+
+### 📊 Power BI & Excel Reporting Assets
+| File | Location | Description |
+|------|----------|-------------|
+| `Gold_ProductProfitability_Model_Analyze.xlsx` | `power_bi/` | Direct connection workbook for Microsoft Excel Pivot Tables connected securely to the Fabric default semantic model [5]. |
+| `Gold_ProductProfitability_Model_VertiPaq.xlsx` | `power_bi/` | Semantic model memory footprint audit, column cardinalities, and dictionary sizes exported from VertiPaq Analyzer [5]. |
 
 ---
 

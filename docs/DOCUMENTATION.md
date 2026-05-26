@@ -41,40 +41,12 @@ All percentage columns (`margin_pct`, `discount_pct`, `tax_rate`, `redemption_ra
 
 ---
 
-## 📏 Data Rules & Business Logic
-
-| Rule | Detail |
-|------|--------|
-| **Margins** | Stored as decimal fractions. Range: −10% to 30%. Negative margins are **allowed** and represent loss-leader marketing strategies. |
-| **Relational Integrity Dummies** | Every dimension table contains a `-1` (and `0` for Promo) technical dummy row representing "Unknown" or "Missing" values to prevent NULLs in fact table FK columns during ETL. |
-| **Returns** | `returnreason = 'No return'` for non-return rows, never NULL |
-| **In-Store delivery** | `deliverydays = 0` for all In-Store transactions |
-| **Hour** | Column `hour` (0–23) always populated, never NULL |
-| **Gender** | Only `Male` / `Female` values |
-| **Percentages** | All stored as decimal fractions, ready for Power BI % formatting |
-| **Quantity scaling** | Daily net-sales targets met by scaling `qty`, preserving intrinsic product margins |
-| **Discount flag** | `discountapplied` set **after** rounding `discountamount` to avoid false mismatches |
-| **Variance** | Wide spread in store sizes (0.1–10.0), customer incomes (bi-modal), and product margins (prescribed distribution) |
-
-### Product margin distribution
-
-| Margin range | Share of products |
-|---|---|
-| Exactly 30% | 5% |
-| 20%–29% | 5% |
-| Exactly 15% | 5% |
-| 5%–10% | 50% |
-| 0%–5% | 30% |
-| −10%–0% (negative) | 5% |
-
----
-
 ## 🔒 Row-Level Security (RLS) Specification
 
 To enforce data privacy across regional business units, the model implements static Row-Level Security (RLS) within the reporting layer. 
 
 ### Regional Security Roles
-Security filtering is applied to the `region` column in `dim_store`. Because of the active 1-to-many relationship, filtering the store dimension automatically propagates and filters the `fact_sales` transactional table.
+Security filtering is applied to the `region` column in `dim_store` [vw_007_store_performance_by_region_type]. Because of the active 1-to-many relationship, filtering the store dimension automatically propagates and filters the `fact_sales` transactional table [vw_007_store_performance_by_region_type].
 
 | Role Name | DAX Filter Expression (Power BI) | Business Purpose |
 |-----------|---------------------------------|------------------|
@@ -111,8 +83,36 @@ GO
 
 To ensure enterprise-grade performance and business adoption, the final semantic model was optimized and integrated for self-service reporting:
 
-- **VertiPaq Engine Optimization:** Using **DAX Studio** and **VertiPaq Analyzer**, column cardinalities, relationships, and dictionary sizes were audited. Highly-precise datatypes (such as fractions for `_pct` columns and targeted decimals) were enforced in the silver/gold layers to achieve maximum columnar compression in memory.
-- **Analyze in Excel Integration:** Designed and secured the semantic model to support native AD-Hoc reporting. Business and finance stakeholders can connect directly to the centralized, single-source-of-truth Fabric model using Excel Pivot Tables, preventing local file fragmentation and data security breaches.
+- **VertiPaq Engine Optimization:** Using **DAX Studio** and **VertiPaq Analyzer**, column cardinalities, relationships, and dictionary sizes were audited. Highly-precise datatypes (such as fractions for `_pct` columns and targeted decimals) were enforced in the silver/gold layers to achieve maximum columnar compression in memory. The compiled database metrics are stored in `power_bi/Gold_ProductProfitability_Model_VertiPaq.xlsx` [5].
+- **Analyze in Excel Integration:** Designed and secured the semantic model to support native AD-Hoc reporting. Business and finance stakeholders can connect directly to the centralized, single-source-of-truth Fabric model using Excel Pivot Tables, preventing local file fragmentation and data security breaches. The connection template is provided in `power_bi/Gold_ProductProfitability_Model_Analyze.xlsx` [5].
+
+---
+
+## 📏 Data Rules & Business Logic
+
+| Rule | Detail |
+|------|--------|
+| **Margins** | Stored as decimal fractions. Range: −10% to 30%. Negative margins are **allowed** and represent loss-leader marketing strategies. |
+| **Relational Integrity Dummies** | Every dimension table contains a `-1` (and `0` for Promo) technical dummy row representing "Unknown" or "Missing" values to prevent NULLs in fact table FK columns during ETL. |
+| **Returns** | `returnreason = 'No return'` for non-return rows, never NULL |
+| **In-Store delivery** | `deliverydays = 0` for all In-Store transactions |
+| **Hour** | Column `hour` (0–23) always populated, never NULL |
+| **Gender** | Only `Male` / `Female` values |
+| **Percentages** | All stored as decimal fractions, ready for Power BI % formatting |
+| **Quantity scaling** | Daily net-sales targets met by scaling `qty`, preserving intrinsic product margins |
+| **Discount flag** | `discountapplied` set **after** rounding `discountamount` to avoid false mismatches |
+| **Variance** | Wide spread in store sizes (0.1–10.0), customer incomes (bi-modal), and product margins (prescribed distribution) |
+
+### Product margin distribution
+
+| Margin range | Share of products |
+|---|---|
+| Exactly 30% | 5% |
+| 20%–29% | 5% |
+| Exactly 15% | 5% |
+| 5%–10% | 50% |
+| 0%–5% | 30% |
+| −10%–0% (negative) | 5% |
 
 ---
 
@@ -191,11 +191,11 @@ To ensure enterprise-grade performance and business adoption, the final semantic
 | tax_rate | DECIMAL(5,4) | NOT NULL | Tax Rate % | VAT / Sales tax percentage (stored as fraction, e.g., 0.21). |
 | haswarranty | TINYINT | NOT NULL | Has Warranty | Flag indicating whether the item includes product warranty. |
 | ecofriendly | TINYINT | NOT NULL | Is Eco-Friendly | Flag indicating if product has sustainable score above threshold. |
-| seasonalityfactor | DECIMAL(5,2) | NOT NULL | Seasonality Factor | Demand multiplier (0.7–1.3) |
+| seasonalityfactor | DECIMAL(5,2) | NOT NULL | Seasonality Factor | Demand fluctuation factor across months (0.7–1.3) |
 | warrantymonths | TINYINT | NOT NULL | Warranty Months | Duration of warranty in months (12, 24, 36). |
 | ecoscore | TINYINT | NOT NULL | Eco Score | Numeric index of environmental impact (20 to 200). |
 | releaseyear | SMALLINT | NOT NULL | Release Year | Year the product model was introduced. |
-| skucount | INT | NOT NULL | SKU Count | Number of variants available for this product. |
+| skucount | INT | NOT NULL | SKU Count | Number of variations available for this product. |
 | isdiscontinued | TINYINT | NOT NULL | Is Discontinued | Flag representing obsolete inventory. |
 | productrating | DECIMAL(3,1) | NOT NULL | Rating | Average consumer rating (1.0 to 5.0). |
 | stockstatus | NVARCHAR(20) | NOT NULL | Inventory Status | In Stock, Low Stock, or Out of Stock classification. |
@@ -461,7 +461,7 @@ SELECT p.category, FORMAT(SUM(sa.revenue), 'N0') AS revenue
 FROM sales_agg sa
 INNER JOIN dbo.dimproduct p ON sa.productid = p.productid
 GROUP BY p.category
-ORDER BY SUM(sa.revenue) DESC;
+ORDER BY SUM(f.net) DESC;
 ```
 
 **Python:**
@@ -534,160 +534,6 @@ RETURN DIVIDE(Promo - NonPromo, NonPromo, 0)
 **Python:**
 ```python
 uplift = (avg_promo - avg_non) / avg_non
-```
-
----
-
-## 🚀 Advanced Analytical Scenarios
-
-These advanced scenarios provide enterprise-grade analytics covering YoY growth, customer cohorts, and basket analysis.
-
-### 11. Year-over-Year (YoY) Monthly Sales Growth
-*Calculates monthly revenue growth compared to the same month of the previous year, showing the growth percentage.*
-
-**T-SQL (Optimized):**
-```sql
-WITH MonthlySales AS (
-    SELECT d.[year] AS SalesYear,
-           d.monthnumber AS SalesMonth,
-           SUM(f.net) AS MonthlyRevenue
-    FROM dbo.factsales f
-    INNER JOIN dbo.dimdate d ON f.datekey = d.datekey
-    WHERE f.isreturn = 0
-    GROUP BY d.[year], d.monthnumber
-)
-SELECT cur.SalesYear, 
-       cur.SalesMonth,
-       FORMAT(cur.MonthlyRevenue, 'N0') AS CurrentRevenue,
-       FORMAT(prev.MonthlyRevenue, 'N0') AS PriorYearRevenue,
-       FORMAT((cur.MonthlyRevenue - prev.MonthlyRevenue) / NULLIF(prev.MonthlyRevenue, 0) * 100, 'N2') + '%' AS YoYGrowthPct
-FROM MonthlySales cur
-LEFT JOIN MonthlySales prev ON cur.SalesYear = prev.SalesYear + 1 AND cur.SalesMonth = prev.SalesMonth
-ORDER BY cur.SalesYear, cur.SalesMonth;
-```
-
-**DAX:**
-```dax
-YoY Revenue Growth % = 
-VAR CurrentRevenue = [Total Revenue]
-VAR PriorYearRevenue = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(dimdate[fulldate]))
-RETURN DIVIDE(CurrentRevenue - PriorYearRevenue, PriorYearRevenue, 0)
-```
-
-**Python (Pandas):**
-```python
-monthly = nonret_date.groupby(['year', 'monthnumber'])['net'].sum().reset_index()
-monthly['prior_year_net'] = monthly.groupby('monthnumber')['net'].shift(1)
-monthly['yoy_growth_pct'] = (monthly['net'] - monthly['prior_year_net']) / monthly['prior_year_net'] * 100
-```
-
-### 12. Advanced Customer RFM Segmentation
-*Generates customer-level RFM metrics (Recency, Frequency, Monetary) and aggregates them into strategic cohorts.*
-
-**T-SQL (Optimized):**
-```sql
-WITH CustomerMetrics AS (
-    SELECT f.customerid,
-           DATEDIFF(day, MAX(d.fulldate), CAST(GETDATE() AS DATE)) AS Recency,
-           COUNT(DISTINCT f.salesid) AS Frequency,
-           SUM(f.net) AS Monetary
-    FROM dbo.factsales f
-    INNER JOIN dbo.dimdate d ON f.datekey = d.datekey
-    WHERE f.isreturn = 0
-    GROUP BY f.customerid
-),
-ScoredMetrics AS (
-    SELECT customerid, Recency, Frequency, Monetary,
-           NTILE(5) OVER (ORDER BY Recency DESC) AS R_Score,
-           NTILE(5) OVER (ORDER BY Frequency ASC) AS F_Score,
-           NTILE(5) OVER (ORDER BY Monetary ASC) AS M_Score
-    FROM CustomerMetrics
-)
-SELECT customerid, Recency, Frequency, Monetary, R_Score, F_Score, M_Score,
-       CASE 
-           WHEN R_Score >= 4 AND F_Score >= 4 THEN 'Champions'
-           WHEN R_Score >= 4 AND F_Score >= 3 THEN 'Loyal'
-           WHEN R_Score >= 3 AND M_Score >= 4 THEN 'Big Spenders'
-           WHEN R_Score <= 2 AND F_Score <= 2 THEN 'At Risk'
-           WHEN R_Score = 1 THEN 'Lost'
-           ELSE 'Other'
-       END AS Segment
-FROM ScoredMetrics;
-```
-
-**DAX (Calculated Table):**
-```dax
-RFM Table = 
-SUMMARIZE(
-    FILTER(factsales, factsales[isreturn] = 0),
-    factsales[customerid],
-    "Recency", DATEDIFF(MAX(dimdate[fulldate]), TODAY(), DAY),
-    "Frequency", DISTINCTCOUNT(factsales[salesid]),
-    "Monetary", SUM(factsales[net])
-)
-```
-
-**Python (Pandas):**
-```python
-customer_rfm = nonret_date.groupby('customerid').agg(
-    recency=('fulldate', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
-    frequency=('salesid', 'nunique'),
-    monetary=('net', 'sum')
-).reset_index()
-
-customer_rfm['r_score'] = pd.qcut(customer_rfm['recency'].rank(method='first'), 5, labels=[5,4,3,2,1])
-customer_rfm['f_score'] = pd.qcut(customer_rfm['frequency'].rank(method='first'), 5, labels=[1,2,3,4,5])
-customer_rfm['m_score'] = pd.qcut(customer_rfm['monetary'].rank(method='first'), 5, labels=[1,2,3,4,5])
-```
-
-### 13. Market Basket Analysis (Top Product Pairs)
-*Finds the Top 100 product combinations bought together in the same basket, indicating cross-sell lift.*
-
-**T-SQL (Optimized):**
-```sql
-WITH TransactionProducts AS (
-    SELECT DISTINCT salesid, productid
-    FROM dbo.factsales
-    WHERE isreturn = 0
-),
-ProductPairs AS (
-    SELECT p1.productid AS ProductA,
-           p2.productid AS ProductB,
-           COUNT(*) AS CoOccurrenceCount
-    FROM TransactionProducts p1
-    INNER JOIN TransactionProducts p2 ON p1.salesid = p2.salesid AND p1.productid < p2.productid
-    GROUP BY p1.productid, p2.productid
-)
-SELECT TOP 100 
-       pa.ProductA, pa.ProductB, pa.CoOccurrenceCount,
-       prodA.name AS ProductAName, prodB.name AS ProductBName
-FROM ProductPairs pa
-INNER JOIN dbo.dimproduct prodA ON pa.ProductA = prodA.productid
-INNER JOIN dbo.dimproduct prodB ON pa.ProductB = prodB.productid
-ORDER BY pa.CoOccurrenceCount DESC;
-```
-
-**DAX (Co-Purchase Measure):**
-```dax
-Co-Purchased Products Count = 
-VAR CurrentProduct = SELECTEDVALUE(dimproduct[productid])
-RETURN
-CALCULATE(
-    DISTINCTCOUNT(factsales[salesid]),
-    CALCULATETABLE(
-        SUMMARIZE(factsales, factsales[salesid]),
-        ALL(dimproduct)
-    ),
-    factsales[isreturn] = 0
-)
-```
-
-**Python (Pandas):**
-```python
-tx_prods = nonret_fact[['salesid', 'productid']].drop_duplicates()
-pairs = tx_prods.merge(tx_prods, on='salesid')
-pairs = pairs[pairs['productid_x'] < pairs['productid_y']]
-top_pairs = pairs.groupby(['productid_x', 'productid_y']).size().reset_index(name='co_occurrence').sort_values('co_occurrence', ascending=False).head(100)
 ```
 
 ---
