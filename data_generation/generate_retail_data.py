@@ -3,7 +3,7 @@
 # ============================================================================
 # Author:       DataGen AI & Assistant
 # Created:      2026-05-23
-# Last modified: 2026-05-25 18:15:00 UTC
+# Last modified: 2026-05-26 09:20:00 UTC
 # Description:  Generates a complete synthetic retail dataset consisting of
 #               5 dimension tables (date, customer, product, store, promotion)
 #               and 1 fact table (10 million sales transactions).
@@ -11,6 +11,7 @@
 #               - Optimized referential integrity checks to run in a single pass.
 #               - Formatted floating-point decimals to avoid bulk-load issues.
 #               - Vectorized mapping lookups inside the generation loop.
+#               - Configured to output into the local project folder (csv/).
 # ============================================================================
 
 import numpy as np
@@ -24,7 +25,11 @@ import csv
 # 1. CONFIGURATION
 #    All tunable parameters (paths, record counts, random seed, chunk size).
 # ============================================================================
-OUTPUT_DIR    = "c:/data"                # Directory where CSV files will be written
+# Automatically determine the project directory structure using relative paths
+SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR   = os.path.dirname(SCRIPT_DIR)
+OUTPUT_DIR    = os.path.join(PROJECT_DIR, "csv") # Outputs directly to the project's csv folder
+
 N_SALES       = 10_000_000               # Target number of fact table rows
 N_CUSTOMERS   = 200_000                  # Unique customers
 N_PRODUCTS    = 2_000                    # Unique products
@@ -94,7 +99,7 @@ BRANDS = {
 
 FIRST_NAMES_MALE   = ['James','John','Robert','Michael','William','David','Richard','Joseph','Thomas','Charles','Daniel','Matthew']
 FIRST_NAMES_FEMALE = ['Mary','Patricia','Jennifer','Linda','Elizabeth','Barbara','Susan','Jessica','Sarah','Karen','Lisa','Nancy']
-LAST_NAMES         = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez']
+LAST_NAMES         = ['Smith','Johnson','Douglas','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez']
 
 GENDERS      = ['Male','Female']
 EDUCATION    = ['High School','Bachelor','Master','PhD']
@@ -407,7 +412,7 @@ for i, cat in enumerate(product_categories):
     p_base   = round(np.random.uniform(cfg['price_lo'], cfg['price_hi']), 2)
     p_final  = round(p_base * product_brand_premium[i], 2)
     margin   = margins[i]
-    cost     = round(p_final * (1 - margin), 2)
+    cost = round(p_final * (1 - margin), 2)
 
     if cost <= 0:
         cost   = round(p_final * 0.75, 2)

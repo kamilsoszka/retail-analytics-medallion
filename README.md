@@ -1,4 +1,3 @@
-
 # 🚀 Retail Analytics – End-to-End Data Pipeline
 
 **Author:** DataGen AI & Assistant  
@@ -15,6 +14,9 @@
 - **Delta Lake File Optimization:** Mitigates the "Tiny Files Problem" by avoiding physical folder partitioning on the fact table. Utilizes a single-pass `OPTIMIZE` combining file compaction and 3-axis `Z-ORDER` (`datekey`, `productid`, `customerid`) [optimize_delta_tables.py].
 - **Defensive Data Quality (DQ):** Multi-table validation audits and structural checks that intelligently recognize and skip technical dummy records (`-1`/`0`) in business range checks [validate_retail_data_quality.sql, validate_fabric_layers.sql].
 - **End-to-End Orchestrator (`run_pipeline.py`):** Runs the entire SQL Server pipeline with a single command. Parses and splits T-SQL batches around the `GO` delimiter, manages `autocommit` transactions, and displays SQL test reports directly in the console [run_pipeline.py].
+- **VertiPaq Engine Optimization:** Audits and profiles semantic model memory footprint using **DAX Studio** and **VertiPaq Analyzer** to ensure maximum columnar compression and sub-second report response times.
+- **Analyze in Excel Integration:** Supports native, secure, ad-hoc business pivoting by connecting local Excel Pivot Tables directly to the cloud-hosted Microsoft Fabric Default Semantic Model.
+- **Row-Level Security (RLS):** Implements static geographic data boundaries (`dimstore[region]`) to restrict data visibility based on user security roles (e.g. Regional Managers).
 
 ---
 
@@ -64,7 +66,22 @@ create_gold_views.py     ──►  03_gold_db   (🥇 Gold Layer)
 
 ---
 
-## 💾 Generated Files (`Files/raw/` or `c:/data/`)
+## ⚡ Semantic Model Optimization & Self-Service BI
+
+To ensure enterprise-grade performance and business adoption, the final semantic model was optimized and integrated for self-service reporting:
+
+- **VertiPaq Engine Optimization:** Using **DAX Studio** and **VertiPaq Analyzer**, column cardinalities, relationships, and dictionary sizes were audited. Highly-precise datatypes (such as fractions for `_pct` columns and targeted decimals) were enforced in the silver/gold layers to achieve maximum columnar compression in memory.
+- **Analyze in Excel Integration:** Designed and secured the semantic model to support native AD-Hoc reporting. Business and finance stakeholders can connect directly to the centralized, single-source-of-truth Fabric model using Excel Pivot Tables, preventing local file fragmentation and data security breaches.
+- **Row-Level Security (RLS) Specification:** Enforces strict geographic data boundaries by implementing regional security roles. Slicing the `region` column on `dim_store` automatically propagates and secures the `fact_sales` table.
+  - Role `Regional_Manager_North` filters `dimstore[region] = "North"`
+  - Role `Regional_Manager_South` filters `dimstore[region] = "South"`
+  - Role `Regional_Manager_East`  filters `dimstore[region] = "East"`
+  - Role `Regional_Manager_West`  filters `dimstore[region] = "West"`
+  - Role `Regional_Manager_Central` filters `dimstore[region] = "Central"`
+
+---
+
+## 💾 Generated Files (`C:\retail-analytics-project\csv\`)
 
 | File | Row Count | Relational Dummy Rows | Description |
 |------|-----------|------------------------|-------------|
@@ -110,17 +127,16 @@ create_gold_views.py     ──►  03_gold_db   (🥇 Gold Layer)
    ```bash
    pip install pandas numpy pyodbc
    ```
-2. Open `run_pipeline.py`. Configure your SQL Server name and separate paths for your Python generator and SQL scripts folder:
+2. Open `run_pipeline.py`. Configure your local named instance and base project directories safely:
    ```python
    SQL_SERVER_NAME    = "YOUR_SERVER_NAME"
-   PYTHON_SCRIPTS_DIR = r"C:\Users\kamil\OneDrive - ksoszka\Kamil Soszka Business Intelligence\retail-analytics-project\data_generation"
-   SQL_SCRIPTS_DIR    = r"C:\Users\kamil\OneDrive - ksoszka\Kamil Soszka Business Intelligence\retail-analytics-project\sql_server"
+   BASE_PROJECT_DIR   = r"C:\retail-analytics-project"
    ```
 3. Run the pipeline:
    ```bash
-   python run_pipeline.py
+   python sql_server/run_pipeline.py
    ```
-   *The pipeline will automatically generate files, recreate the database, bulk-load staging, migrate to production, apply indexes/keys, build views, and print comprehensive data quality and model integrity audits directly to your console.*
+   *The pipeline will automatically generate files into C:\retail-analytics-project\csv\, recreate the database, bulk-load staging, migrate to production, apply indexes/keys, build views, and print comprehensive data quality and model integrity audits directly to your console.*
 
 ### Option B: Microsoft Fabric Cloud Execution
 1. Create a **Lakehouse** in your Microsoft Fabric workspace.

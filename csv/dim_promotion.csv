@@ -1,6 +1,6 @@
 promoid,promoname,discount_pct,discount_fixed,type,isactive,minspend,channel,budget,startdate,enddate,targetaudience,maxdiscountcap,isstackable,redemption_rate,coderequired,promoupliftfactor
 -1,Unknown Promotion,0.0000,0.00,Unknown,0,0,Unknown,0.00,1900-01-01,1900-01-01,Unknown,0.00,0,0.000,0,1.000
-0,No Promotion,0.0000,0.00,None,1,0,All,0.00,2023-01-01,2026-05-25,All,0.00,0,0.000,0,1.000
+0,No Promotion,0.0000,0.00,None,1,0,All,0.00,2023-01-01,2026-05-26,All,0.00,0,0.000,0,1.000
 1,No Shipping Fee,0.0000,0.00,Free Shipping,0,50,Online,0.00,2023-01-04,2023-05-14,All,46.14,0,0.151,0,1.016
 2,Double Up,0.0000,0.00,BOGO,0,10,Email,0.00,2024-01-13,2025-01-01,Loyal,51.41,1,0.036,0,2.092
 3,Member Special 37% OFF,0.3721,0.00,Percentage,0,10,SMS,10342.00,2024-06-08,2024-10-22,Loyal,46.91,0,0.294,0,1.329

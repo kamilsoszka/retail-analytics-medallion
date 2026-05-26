@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Author:           DataGen AI & Assistant
 -- Created:          2026-05-23
--- Last modified:    2026-05-25 18:30:00 UTC
+-- Last modified:    2026-05-26 09:38:00 UTC
 -- Suggested name:   build_retailanalytics_database.sql
 -- Description:
 --   Creates the retailanalytics database in SQL Server using an ELT pattern.
@@ -13,6 +13,7 @@
 --   - Applies Primary Keys, Foreign Keys, and Non-Clustered Indexes AFTER data load.
 --   - Builds a Clustered Columnstore Index on the fact table for compression.
 --   - Performs basic row-count reconciliation and data quality checks.
+--   - Paths configured for the standard local directory: C:\retail-analytics-project\csv\.
 -- ============================================================================
 
 USE master;
@@ -394,36 +395,32 @@ GO
 -- ============================================================================
 -- STEP 5: Load data into Staging Tables using BULK INSERT
 --   - Uses UTF-8 (65001) codepage configuration for proper character support.
---   - Bulk insert paths assume default path "c:\data\".
+--   - Paths mapped to standard local C:\retail-analytics-project\csv\ directory.
 -- ============================================================================
-PRINT '============================================================';
-PRINT 'STEP 5: Load Staging Tables via BULK INSERT';
-PRINT '============================================================';
 
 PRINT '  -> Loading staging.stg_dimdate...';
-BULK INSERT staging.stg_dimdate FROM 'c:\data\dim_date.csv'
+BULK INSERT staging.stg_dimdate FROM 'C:\retail-analytics-project\csv\dim_date.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
 
 PRINT '  -> Loading staging.stg_dimcustomer...';
-BULK INSERT staging.stg_dimcustomer FROM 'c:\data\dim_customer.csv'
+BULK INSERT staging.stg_dimcustomer FROM 'C:\retail-analytics-project\csv\dim_customer.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
 
 PRINT '  -> Loading staging.stg_dimproduct...';
-BULK INSERT staging.stg_dimproduct FROM 'c:\data\dim_product.csv'
+BULK INSERT staging.stg_dimproduct FROM 'C:\retail-analytics-project\csv\dim_product.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
 
 PRINT '  -> Loading staging.stg_dimstore...';
-BULK INSERT staging.stg_dimstore FROM 'c:\data\dim_store.csv'
+BULK INSERT staging.stg_dimstore FROM 'C:\retail-analytics-project\csv\dim_store.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
 
 PRINT '  -> Loading staging.stg_dimpromotion...';
-BULK INSERT staging.stg_dimpromotion FROM 'c:\data\dim_promotion.csv'
+BULK INSERT staging.stg_dimpromotion FROM 'C:\retail-analytics-project\csv\dim_promotion.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
 
 PRINT '  -> Loading staging.stg_factsales (10M rows)...';
-BULK INSERT staging.stg_factsales FROM 'c:\data\fact_sales.csv'
+BULK INSERT staging.stg_factsales FROM 'C:\retail-analytics-project\csv\fact_sales.csv'
 WITH (FIRSTROW=2, FIELDTERMINATOR=',', ROWTERMINATOR='\n', TABLOCK, CODEPAGE='65001');
-GO
 
 PRINT '  -> Staging ingestion completed.';
 GO
