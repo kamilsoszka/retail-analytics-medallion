@@ -3,7 +3,7 @@
 # ============================================================================
 # Author:           DataGen AI & Assistant
 # Created:          2026-05-23
-# Last modified:    2026-05-25 19:48:00 UTC
+# Last modified:    2026-05-26 09:40:00 UTC
 # Suggested name:   create_gold_views.py
 # Description:
 #   Fabric notebook – Gold layer creation.
@@ -465,7 +465,7 @@ tier_prod_agg AS (
     FROM sales_agg sa
     INNER JOIN {p} p ON sa.productid = p.productid
 )
-SELECT price_tier, category, COUNT(DISTINCT productid) AS products, total_qty,
+SELECT price_tier, category, COUNT(DISTINCT productid) AS products, SUM(total_qty) AS total_qty,
        ROUND(SUM(revenue), 2) AS revenue,
        ROUND(SUM(total_margin), 2) AS total_margin,
        ROUND(SUM(total_margin) / NULLIF(SUM(revenue), 0), 4) AS achieved_margin_pct,
@@ -555,7 +555,7 @@ SELECT pi.promoid, pr.promoname, pr.type, pr.discount_pct,
        ROUND((pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin, 2) AS margin_increase,
        ROUND(((pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin) / NULLIF(b.base_margin, 0), 4) AS margin_uplift_pct,
        ROUND(pi.total_margin / NULLIF(ptc.actual_txn, 0), 2) AS actual_margin_per_txn,
-       RANK() OVER (ORDER BY (pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin) DESC) AS margin_effectiveness_rank
+       RANK() OVER (ORDER BY (pi.total_margin / NULLIF(ptc.actual_txn, 0)) - b.base_margin DESC) AS margin_effectiveness_rank
 FROM promo_impact pi
 INNER JOIN {pr} pr ON pi.promoid = pr.promoid
 INNER JOIN promo_txn_counts ptc ON pi.promoid = ptc.promoid
